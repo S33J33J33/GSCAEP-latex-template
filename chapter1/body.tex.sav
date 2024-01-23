@@ -1,0 +1,144 @@
+% !Mode:: "TeX:UTF-8"
+
+\BiChapter{绪论}{Introduction}
+
+\BiSection{研究背景}{Research background}
+%\centerline{满纸荒唐言，一把辛酸泪！都云作者痴，谁解其中味？} \par
+%\hspace{27em} ——曹雪芹
+%\CJKnumber{\arabic{\thechapter}}
+辐射流体力学(RHD)模型在很多不同的工程和科学领域中都有着广泛的应用[]。应用的领域包括高温的流体力学，激光聚变物理学，惯性约束聚变，燃烧现象，等离子体物理，超新星等。辐射流体力学模型为很多可观测的天体物理现象提供了理论基础。对于该模型的计算可以帮助我们更好的模拟观测到的天体物理的现象和实验室试验，并进行预测来指导进一步的观测和试验。
+
+辐射流体力学模型描述了热辐射通过流体的传播，以及该热辐射对流体运动产生的影响。其中辐射流体力学模型中的热辐射项是原子的电磁辐射而不是核辐射，该辐射通常是处于热激发状态的物质所发出的，因此被称作是热辐射。物质与辐射场之间的动量与能量的交换是由光子的吸收、散射、释放过程完成的。通过物质，辐射的吸收和释放分别使得系统产生加热和冷却。而大量的辐射传输直接关系温度梯度和能量梯度的存在。当有足够的时间时，压力梯度将会产生大量的流动并会改变物质的密度。随着温度的升高，热辐射在物理问题中的重要性也是越来越高。在适当的温度下，热辐射主要是传输能量的一种。而在较高的温度时，辐射场的能量和动量密度将可能大于流体中相应的量，从而对流动占主导作用。
+
+因为辐射流体力学模型是一个具有强非线性和强耦合的性质，直接求解过于复杂，通常采用扩散近似的方法。当辐射温度与物质温度达到平衡时，即可使用平衡扩散极限下辐射流体力学方程组描述。若忽略其扩散项，则是零扩散极限下的辐射模型。当辐射场和物质之间没有到达平衡时，即采用非平衡扩散极限的近似模型。若忽略辐射系数，则将会转化为我们常见的$Euler$ 方程。
+
+\BiSection{研究现状}{Research status}
+
+\BiSubsection{Euler 方程组}{Euler equation}
+当辐射系数等于 $0$ 时，流体力学方程组将会变为常见的$Euler$方程组。对于欧拉方程组的来说，目前已有大量的高精度的数值方法的研究，并且这方面的工作相对较为成熟，如文献\cite{leveque1992numerical,toro2013riemann,roe1981approximate}。$Godunov$提出了分片常数作为初值来求解$Euler$ 方程组黎曼问题来计算界面上的数值通量方法，该方法对于计算流体力学来讲具有划时代的意义\cite{godunov1959difference}。
+$Van Leer$ 改进了$godunov$的方法，他使用分片线性的数据作为初值，来求解$Euler$ 方程组，也就是著名的$MUSCL$格式，使得算法的精度提高到二阶
+\cite{1979Towards}，其通过初始数据重构来增加算法精度的方法，推动了高精度的数值方法的发展。
+$Woodward$ 和 $Colella$ 采用分片抛物的方法($PPM$) 进行数据重构，进一步发展了$godunov$ 方法\cite{colella1984piecewise,woodward1986piecewise} 实现了三阶精度。
+$ENO/WENO$数据重构将$Godunov$类型的方法进一步推广到任意高阶的精度
+\cite{harten1987uniformly,liu1994weighted}。
+GRP算法是$Godunov$方法一个高阶精度的拓展，利用分段线性函数来估计初始数据，并在每个界面上解析的求解局部黎曼问题得到数值通量
+\cite{ben1984second,ben2003generalized,ben2007hyperbolic,ben2006direct}。
+\BiSubsection{辐射流体力学方程组}{Radiation hydrodynamical equations}
+由于辐射压力和辐射能量的强非线性，数值通量不能够由守恒变量显示的表达出来，相对于$Euler$方程组来说，设计辐射流体力学方程组的算法并不容易。
+
+如上文所述，当忽略扩散项时，则是零扩散极限下的辐射模型，可以将其改写为双曲守恒定律系统。汤华中等人研究了使用了动理学矢通量分裂的方法求解该系统\cite{tang2000kinetic}。
+江松，孙文俊将二阶的$BGK$格式应用到求解多维的零扩散辐射模型中\cite{jiang2007second}。
+随后，匡阳钰和汤华中将二阶的欧式$GRP$格式推展到零扩散辐射模型中\cite{kuang2019second}。
+
+当考虑扩散项时，如果辐射温度与物质温度达到平衡，则可以通过平衡态下的辐射流体力学模型描述。
+$Lowrie$ 和 $Rauenzahn$ 研究得到了平衡扩散极限模型平面辐射激波的半解析解\cite{lowrie2007radiative}，为该模型的算法设计提供了参考。
+$Dai$ 和 $Woodward$ 在文献\cite{dai1998numerical}中提出了一个线性和一个非线性的黎曼解法器，但该算法计算成本比较大。$Qamar$ 和 $Ashraf$ 应用了一个中心格式求解该平衡态下的辐射流体力学方程组\cite{2013Application}。
+
+若当辐射场和物质之间没有到达平衡时，即可以由非平衡扩散极限的近似模型描述。
+$Lowrie$ 和 $Edwards$ 研究得到了该极限下模型的平面辐射激波的半解析解，为数值计算提供了重要的理论基础\cite{2008Radiative}。
+
+
+
+\BiSection{模型导出}{Derivation of the model}
+为了能够更深入的了解、研究辐射流体力学模型，本节将详细的介绍由微观的方程得到平衡扩散极限下的辐射流体力学方程组和非平衡扩散极限下的辐射流体力学方程组过程。
+
+首先，我们定义光子的分布函数
+\begin{equation}\label{distribution_function}
+f:=f(\mathbf{r},\nu,\mathbf{n},t),
+\end{equation}
+这里 $t$ 表示时间，$\nu$ 表示光子的频率，矢量 $\mathbf{r}$ 表示位置变量，$\mathbf{n}$ 表示光子运动的角度。
+本文，我们使用笛卡尔坐标 $x,y,z$ 来表示向量 $\mathbf{r}$。为了表示$\mathbf{n}$，我们令$\theta$表示极角，$\varphi$表示方位角。
+并有关系式，
+\begin{equation}\label{dr}
+d\mathbf{r}=dxdydz,
+\end{equation}
+\begin{equation}\label{dOmega}
+d\mathbf{n}=sin\theta d\theta \varphi d =d\mu d\varphi,
+\end{equation}
+这里$\mu=cos\theta$。
+我们在固定的空间，考虑有$\Delta x$，$\Delta y$，$\Delta z$，$\Delta \nu$，$\Delta \mu$，$\Delta \varphi$六个维度的立方体。
+在$t$时刻这个立方体种光子的数量为
+\begin{equation}\label{numberofphotons}
+number~of~photons = f(\mathbf{r},\nu,\mathbf{n},t)\Delta x\Delta y\Delta z\Delta \nu\Delta \mu\Delta \varphi.
+\end{equation}
+在这个六维立方体中光子数量随时间的变化率为
+\begin{equation}\label{ratechangenumberofphotons}
+change = \frac{\partial}{\partial t}[ f(\mathbf{r},\nu,\mathbf{n},t)\Delta V]=\Delta V\frac{\partial}{\partial t} f(\mathbf{r},\nu,\mathbf{n},t).
+\end{equation}
+这里$\Delta V=\Delta x\Delta y\Delta z\Delta \nu\Delta \mu\Delta \varphi$表示立方体的体积。
+而光子的数量的变化受到五个分开的过程的影响，即
+
+(1)通过立方体的边界，光子净流出的速率，
+\begin{equation}\label{streaming}
+streaming=[\frac{\partial}{\partial x}(\dot{x}f)+\frac{\partial}{\partial y(\dot{y}f)}+\frac{\partial}{\partial z(\dot{z}f)}+\frac{\partial}{\partial \nu(\dot{\nu}f)}+\frac{\partial}{\partial \mu(\dot{\mu}f)}+\frac{\partial}{\partial \varphi(\dot{\varphi}f)}]\Delta V.
+\end{equation}
+
+(2)光子的吸收，
+\begin{equation}\label{absorption}
+absorption=c\sigma_a(\mathbf{r},\nu,t)f(r,\nu,n,t)\Delta V,
+\end{equation}
+这里$\sigma_a(\mathbf{r},\nu,t)$是吸收系数，$c$代表光速。
+
+(3)散射出：从$\nu$,$\mathbf{n}$散射到其他频率和方向的光子，
+\begin{equation}\label{outscattering}
+outscattering=c\Delta V\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)f(\mathbf{r},\nu,\mathbf{n},t)
+\end{equation}
+这里$\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)$是散射系数。
+
+(4)散射入：由其他频率和方向的光子散射到$\nu$,$\mathbf{n}$的光子。
+\begin{equation}\label{inscattering}
+outscattering=c\Delta V\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu'\rightarrow\nu,\mathbf{n}'\cdot\mathbf{n},t)f(\mathbf{r},\nu',\mathbf{n}',t)
+\end{equation}
+
+(5)光子的释放。
+\begin{equation}\label{emission}
+emission=q(\mathbf{r},\nu,t)\Delta V
+\end{equation}
+这里$q(\mathbf{r},\nu,t)$是释放系数。
+
+所以，我们有光子数守恒，
+\begin{equation}\label{numberofphotosequation}
+\begin{array}{lll}
+\frac{\partial f(\nu,\Omega)}{\partial t}+\frac{\dot{x}f}{\partial x}+\frac{\dot{y}f}{\partial y}+\frac{\dot{z}f}{\partial z}+\frac{\dot{\nu}f}{\partial \nu}+\frac{\dot{\mu}f}{\partial \mu}+\frac{\dot{\varphi}f}{\partial \varphi}
+&=q(\nu)-c\sigma_a(\nu)f(\nu,n)\vspace{1ex}\\
+&+c\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu'\rightarrow\nu,\mathbf{n}'\cdot\mathbf{n},t)f(\nu',\mathbf{n}')\vspace{1ex}\\
+&-c\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)f(\nu,\mathbf{n}).
+\end{array}
+\end{equation}
+
+假定在固定空间坐标，光子之间碰撞延直线运动，并且光子流中无频率的变换，我们有
+\begin{equation}
+\dot{\mu}=\dot{\varphi}=\dot{\nu}=0.
+\end{equation}
+
+所以可将系统(\ref{numberofphotosequation})化简为
+\begin{equation}\label{numberofphotosequation_Rewrite}
+\begin{array}{lll}
+\frac{\partial f(\nu,\Omega)}{\partial t}+c\mathbf{n}\cdot\nabla f(\nu,\mathbf{n})
+&=q(\nu)-c\sigma_a(\nu)f(\nu,n)\vspace{1ex}\\
+&+c\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu'\rightarrow\nu,\mathbf{n}'\cdot\mathbf{n},t)f(\nu',\mathbf{n}')\vspace{1ex}\\
+&-c\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)f(\nu,\mathbf{n}).
+\end{array}
+\end{equation}
+下面我们引入辐射比强度$I=ch\nu f$，其中$h$为普朗克常数。
+我们可将系统(\ref{numberofphotosequation_Rewrite})转化为
+\begin{equation}\label{intensityradiationequation}
+\begin{array}{lll}
+\frac{1}{c}\frac{\partial I(\nu,\Omega)}{\partial t}+\mathbf{n}\cdot\nabla I(\nu,\mathbf{n})
+&=S(\nu)-\sigma_a(\nu)f(\nu,n)\vspace{1ex}\\
+&+\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu'\rightarrow\nu,\mathbf{n}'\cdot\mathbf{n},t)I(\nu',\mathbf{n}')\vspace{1ex}\\
+&-\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)I(\nu,\mathbf{n}).
+\end{array}
+\end{equation}
+这里$S=S(r,\nu,t)$满足
+\begin{equation}
+S(r,\nu,t)=h\nu q(r,\nu,t)
+\end{equation}
+表示由于自发过程释放的能量速率。
+下面，我们考虑简化的源项，
+\begin{equation}\label{transferequation}
+\frac{1}{c}\frac{\partial}{\partial t}I+
+\end{equation}
+\BiSubsection{平衡扩散极限下的辐射流体力学方程组}{Radiation hydrodynamical equations in the equilibrium diffusion limit}
+
+\BiSubsection{非平衡扩散极限下的辐射流体力学方程组}{Radiation hydrodynamical equations in the grey nonequilibrium diffusion limit}

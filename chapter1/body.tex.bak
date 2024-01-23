@@ -1,0 +1,472 @@
+% !Mode:: "TeX:UTF-8"
+
+\BiChapter{绪论}{Introduction}
+
+\BiSection{研究背景}{Research background}
+%\centerline{满纸荒唐言，一把辛酸泪！都云作者痴，谁解其中味？} \par
+%\hspace{27em} ——曹雪芹
+%\CJKnumber{\arabic{\thechapter}}
+辐射流体力学~(RHD) 模型在很多不同的工程和科学领域中都有着广泛的应用~\cite{mihalas2013foundations,pomraning2005equations,lowrie1999coupling}，如高温的流体力学，激光聚变物理学，惯性约束聚变，燃烧现象，等离子体物理，超新星等，也为很多可观测的天体物理现象提供了理论基础。通过该模型的模拟可以帮助认识天体物理的现象和实验室试验。
+
+辐射流体力学模型描述了热辐射通过流体的传播，以及该热辐射对流体运动产生的影响，其中辐射流体力学模型中的热辐射项是原子的电磁辐射而不是核辐射，该辐射通常是处于热激发状态的物质所发出的，被称作是热辐射。
+%物质与辐射场之间的动量与能量的交换是由光子的吸收、散射、释放过程完成的。
+因为辐射流体力学模型具有强非线性和强耦合的性质，直接求解过于复杂，通常采用扩散近似的方法~\cite{lowrie1999coupling}。
+当辐射温度与物质温度达到平衡时，可使用平衡扩散极限下的辐射流体力学方程组描述~\cite{lowrie2007radiative}，
+\begin{equation*}\label{equilibrium_model_introduction}
+\left\{
+\begin{array}{lll}
+ \partial_t&\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t&(\rho {u})+\partial_x(\rho {u}^2+p^*)=0,\vspace{1ex}\\
+ \partial_t&(\rho E^*)+\partial_x(( \rho E^*+p^*){u})=\partial_x(\kappa(\rho,T)\partial_x T),
+\end{array}
+\right.
+\end{equation*}
+上式中~$\rho$，$u$，$p^*$，$\rho E^*$，$T$ 分别表示密度，速度，总压力，总能量，温度。
+若忽略其扩散项，则是零扩散极限下的辐射模型~\cite{kuang2019second}，
+\begin{equation}\label{zero_model_introduction}
+\left\{
+\begin{array}{lll}
+ \partial_t&\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t&(\rho {u})+\partial_x(\rho {u}^2+p^*)=0,\vspace{1ex}\\
+ \partial_t&(\rho E^*)+\partial_x(( \rho E^*+p^*){u})=0.
+\end{array}
+\right.
+\end{equation}
+当辐射场和物质之间没有到达平衡时，可由非平衡扩散极限下的近似模型描述~\cite{2008Radiative}，
+\begin{equation}\label{nonequilibrium_model_introduction}
+\left\{
+\begin{array}{llll}
+\partial_t&\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t&(\rho {u})+\partial_x(\rho {u}^2+p+\frac{1}{3}\mathcal{P}_0E_r)=0,\vspace{1ex}\\
+ \partial_t&(\rho E)+\partial_x((\rho E +p){u})=-\mathcal{P}_0S_e,\vspace{1ex}\\
+ \partial_t&({E_r})+\frac{4}{3}\partial_x(uE_r)-\partial_x(\kappa(\rho,T)\partial_xE_r)=S_e,\vspace{1ex}
+\end{array}
+\right.
+\end{equation}
+这里~$p$，$\rho E$，$\mathcal{P}_0E_r=\mathcal{P}_0T_r^4$，$T_r$ 分别表示是物质压力、物质能量、辐射能量、辐射温度，$S_e$ 是辐射能量与物质能量的转换。
+若忽略辐射系数，则将会转化为我们常见的~$Euler$ 方程组~\cite{toro2013riemann}，
+\begin{equation}\label{Euler_model_introduction}
+\left\{
+\begin{array}{lll}
+ \partial_t&\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t&(\rho {u})+\partial_x(\rho {u}^2+p)=0,\vspace{1ex}\\
+ \partial_t&(\rho E)+\partial_x(( \rho E+p){u})=0.
+\end{array}
+\right.
+\end{equation}
+
+\BiSection{研究现状}{Research status}
+
+\BiSubsection{Euler 方程组}{Euler equation}
+当辐射系数等于零时，辐射流体力学方程组将会变为常见的~Euler 方程组。对于~Euler 方程组的来说，目前已有大量高精度数值方法的研究，并且这方面的工作相对较为成熟，如文献
+~\cite{leveque1992numerical,toro2013riemann,roe1981approximate,sod1977numerical,
+toro1991linearised,toro1992weighted,toro1995direct,benek1983flexible,bourgeade1989asymptotic,
+toro1994development,giles1990nonreflecting,glaister1988approximate,jameson1981numerical,
+mcneil1995efficient,koren1987multigrid,muller2006riemann,perthame1992second,van1997flux,wang2007implicit,zha1993numerical}。
+1959 年前苏联数学家~Godunov 提出了使用黎曼解来求解网格界面上的数值通量方法，使用分片常数作为初始数据，可实现一阶精度的算法，该方法对于计算流体力学的发展具有划时代的意义~\cite{godunov1959difference}。~Godunov 方法满足守恒性、离散熵条件，
+使得该方法得到了广泛的关注和认可，并得到了进一步的推广和发展。
+
+为了能够提高算法的精度，产生了一些高阶的~Godunov 算法。
+van Leer 改进了~Godunov 的方法，他使用分片线性的数据作为初值，来求解精确的黎曼解法器，使得算法的精度提高到了二阶
+~\cite{1979Towards}，该方法也就是著名的~MUSCL 格式。其通过初始数据重构来增加算法精度的方法是高精度计算格式的重要基础，
+推动了高精度的数值方法发展。
+Woodward 和~Colella 采用分片抛物的方法~(PPM) 进行数据重构，进一步发展了~Godunov 方法~\cite{colella1984piecewise,woodward1986piecewise} 实现了三阶精度。
+ENO/WENO 数据重构将~Godunov 类型的方法进一步推广到任意高阶的精度
+~\cite{harten1987uniformly,liu1994weighted}。
+高阶的差值使得数值解在间断处产生振荡，限制器技术的发展成功的解决了这一问题~\cite{quirk1994alternative,anderson1986comparison}。
+
+在实际计算中，对于复杂的方程组，使用精确的黎曼解法器求解是非常困难的。为解决这一问题，人们设计了近似黎曼解法器，大大增加了计算效率，其中两个典型的代表是~HLL 算法和~Roe 算法。Harten 等人研究得到了求解双曲守恒律的~HLL 近似黎曼解法器~\cite{harten1983upstream}，其主要思想是使用两波结构近似求解。该方法是一个简单实用的算法，但对于~Euler 方程组来说，用两波结构代替三波结构导致对于接触间断的分辨率较低。
+Toro 等人针对该方法的缺点，改进了~HLL 算法，使用三波结构提高了对接触间断的分辨率，得到~HLLC 近似黎曼解法器~\cite{toro1994restoration}。
+Roe 算法是一个线性化的近似黎曼解算法，对间断的分辨率较好~\cite{roe1981approximate}。随后该方法不断被改进，并被应用于很多物理问题中。
+除此之外，常见的近似黎曼解法器还有双激波近似黎曼解法器~\cite{toro1995direct}、双稀疏波近似黎曼解法器~\cite{toro2013riemann}、自适应近似黎曼解法器
+~\cite{toro1993linearized,quirk1994alternative}、Osher 近似黎曼解法器~\cite{engquist1981one,osher1983upwind} 等。
+
+GRP 算法是~Godunov 方法一个高阶精度的拓展
+~\cite{ben1984second,ben2003generalized,ben2007hyperbolic,ben2006direct,li2011comparison,tang2003adaptive,han2010adaptive,han2011accuracy,li2013adaptive,wu2016direct,wu2014third,wu2014third-order,yang2011direct,yang2012direct}，利用分段线性函数来估计初始数据，并在每个界面上解析的求解局部黎曼问题。GRP 解法器是~1984 年由~Ben-Artzi 和~Falcovitz 首次提出的~\cite{ben1984second}。但早期的~GRP 算法是基于~Lagrange 坐标的，转换到~Euler 坐标较为繁琐，尤其是多维情况和声速情况下。为了克服这一困难，2006 年，Ben-Artzi、Li 和~Warnecke 提出了~Euler 坐标下直接地~GRP 方法
+~\cite{ben2006direct}，其声波近似情形就是~ADER (Arbitrary-higher-order-DERivatives) 方法~\cite{toro1998primitive,toro2001towards}，该方法被成功的推广到了非结构网格和非线性系统
+~\cite{balsara2009efficient,dumbser2008unified,dumbser2008finite,titarev2002ader,titarev2005ader,toro2006derivative}。
+
+\BiSubsection{辐射流体力学方程组}{Radiation hydrodynamical equations}
+辐射流体力学方程组在天文物理、惯性约束聚变以及一些其他高温的流体系统中扮演着重要的作用。
+不同于普通的流体运动，辐射流体中辐射场和物质之间动量和能量的交换将直接影响到流体的运动
+~\cite{mihalas2013foundations,pomraning1982radiation,pomraning2005equations}。
+而辐射场的时间尺度与流体运动的尺度相差很大的数量级~\cite{zel2002physics}。
+由于辐射压力和辐射能量的强非线性，数值通量不能够由守恒变量显式的表达出来，相对于~Euler 方程组来说，设计辐射流体力学方程组的算法并不容易。
+%
+%辐射流体力学模型描述了热辐射通过流体的传播，以及该热辐射对流体运动产生的影响，其中辐射流体力学模型中的热辐射项是原子的电磁辐射而不是核辐射，该辐射通常是处于热激发状态的物质所发出的，被称作是热辐射。
+%物质与辐射场之间的动量与能量的交换是由光子的吸收、散射、释放过程完成的。
+%通过物质，辐射的吸收和释放分别使得系统产生加热和冷却。而大量的辐射传输直接关系温度梯度和能量梯度的存在。
+%当有足够的时间时，压力梯度将会产生大量的流动并会改变物质的密度。随着温度的升高，热辐射在物理问题中的重要性也是越来越高。
+%在适当的温度下，热辐射主要是传输能量的一种。而在较高的温度时，辐射场的能量和动量密度将可能大于流体中相应的量，从而对流动起到主导作用。
+
+如上节所述，当忽略扩散项时，则是零扩散极限下的辐射流体力学模型。虽然可以将其改写成守恒律的双曲系统，但它与无粘性的可压缩流体~Euler 方程组有很大的不同。设计辐射流体力学数值算法最大的难点在于强激波的求解和追踪。为了克服该困难，Tang 和~Wu 研究了使用动理学矢通量分裂的方法~(KFVS) 求解该系统~\cite{tang2000kinetic}，并给出了相适应的广义~Maxwell-Boltzmann 分布。随后，Jiang 和~Sun 借鉴了该广义~Maxwell-Boltzmann 分布，并将二阶的~BGK 格式应用到求解多维的零扩散辐射模型中
+~\cite{jiang2007second}。随后，Kuang 和~Tang 将~Euler 坐标下直接地~GRP 方法应用到零扩散辐射模型中~\cite{kuang2019second}，得到二阶精度的算法。
+
+当考虑扩散项时，如果辐射温度与物质温度达到平衡，则可以通过平衡扩散极限下的辐射流体力学模型进行描述\cite{lowrie2007radiative}。
+对于该模型的激波问题有很多的研究
+~\cite{coggeshall1986lie,sincell1999quasi1,lowrie2007radiative,bouquet2000analytical,zel2002physics,mihalas2013foundations}，
+其中~Lowrie 和~Rauenzahn 研究得到了平衡扩散极限下辐射流体模型平面激波的半解析解~\cite{lowrie2007radiative}，为该模型的算法设计提供了参考。
+Dai 和~Woodward 在文献~\cite{dai1998numerical}中提出了一个线性和一个非线性的黎曼解法器，但该算法计算成本比较大。Qamar 和~Ashraf 应用了一个中心迎风格式求解该平衡扩散极限下的辐射流体力学方程组~\cite{2013Application}。Cheng、Shu 和~Song 使用~Lagrange 格式得到该模型的一维守恒高阶算法~\cite{cheng2020high}。
+
+若当辐射场和物质之间没有到达平衡时，即可以由非平衡扩散极限下的辐射流体力学模型描述~\cite{2008Radiative}。
+对于非平衡扩散极限下辐射流体力学模型的激波问题也有很多的研究
+~\cite{mihalas2013foundations,heaslet1963predictions,sincell1999quasi,wang1970effect}。
+Lowrie 和~Edwards 研究得到了该极限下模型的平面辐射激波的半解析解，为数值计算提供了重要的理论基础
+~\cite{2008Radiative}。Bolding，Hansel，Edwards，Morel 和~Lowrie 得到了二阶精度的数值方法来求解一类非平衡极限下的辐射流体力学模型~\cite{2017Second}。若使用该方法求解辐射模型~
+(\ref{nonequilibrium_model_introduction})，则在更新流体变量时在每一个时间步上需要计算两个隐式方程组，因为隐式方程组的计算成本很大，这也使得整个算法的计算量很大。
+
+对于辐射扩散方程组来讲，虽然显式方法通常易于实现、不必计算和储存~Jacobian 矩阵，但其对应的时间步长为满足稳定性条件通常需要严格限制。而隐式的格式在计算中可以允许较大的时间步长~\cite{ferziger2002computational}，但对于强非线性较难处理，要么采取线性化的计算方法，但这会降低计算格式阶；要么就采用非线性迭代的方法。
+非线性迭代算法中最经典的算法是牛顿算法，该方法在很多应用中都可以精确的处理非线性问题~\cite{press1996numerical}。但牛顿算法有一个非常大的缺点就是需要求解~Jacobian  矩阵和~Jacobian 矩阵的逆，尤其是对于涉及到大型非线性方程组的问题，使得计算成本昂贵~\cite{knoll1999efficient}。对于大型的稀疏线性方程组，Krylov 子空间方法能够高效的求解~\cite{saad1986gmres}，该方法在很多领域都得到了广泛的应用。将牛顿算法与~Krylov 子空间结合可以构造出处求解大型稀疏非线性方程组的迭代方法---Newton-Krylov 算法~\cite{knoll2004jacobian}，其中外迭代是近似的方法求解~Newton 方程，这能够提高计算效率；内迭代是一个~Krylov 子空间方法，避免了~Jacobian 矩阵的存储和计算。
+
+
+\BiSection{模型导出}{Derivation of the model}
+为了能够更深入的了解、研究辐射流体力学模型，本节将详细的介绍由微观方程得到平衡扩散极限下辐射流体力学方程组和非平衡扩散极限下灰度辐射流体力学方程组的过程
+~\cite{pomraning2005equations,lowrie1999coupling,buet2004asymptotic}。
+
+首先，根据文献~\cite{pomraning2005equations} 推导得到辐射比强度守恒公式。
+光子的分布函数定义~\cite{pomraning2005equations} 为
+\begin{equation}\label{distribution_function}
+f:=f(\mathbf{r},\nu,\mathbf{n},t),
+\end{equation}
+这里~$t$ 表示时间，$\nu$ 表示光子的频率，矢量~$\mathbf{r}$ 表示位置变量，$\mathbf{n}$ 表示光子运动的角度。
+本文使用笛卡尔坐标~$x,y,z$ 来表示向量~$\mathbf{r}$。为了表示~$\mathbf{n}$，令~$\theta$ 表示极角，$\varphi$ 表示方位角，
+并有关系式，
+\begin{equation}\label{dr}
+d\mathbf{r}=dxdydz,
+\end{equation}
+\begin{equation}\label{dOmega}
+d\mathbf{n}=\sin\theta d\theta d\varphi =d\mu d\varphi,
+\end{equation}
+这里~$\mu=-\cos\theta$。
+在固定的空间，考虑有~$\Delta x$，$\Delta y$，$\Delta z$，$\Delta \nu$，$\Delta \mu$，$\Delta \varphi$ 六个维度的立方体。
+在~$t$ 时刻这个立方体中光子的数量为
+\begin{equation}\label{numberofphotons}
+f(\mathbf{r},\nu,\mathbf{n},t)\Delta x\Delta y\Delta z\Delta \nu\Delta \mu\Delta \varphi.
+\end{equation}
+在这个六维立方体中光子数量随时间的变化率为
+\begin{equation}\label{ratechangenumberofphotons}
+\partial_t[ f(\mathbf{r},\nu,\mathbf{n},t)\Delta V]=\Delta V\partial_tf(\mathbf{r},\nu,\mathbf{n},t).
+\end{equation}
+这里~$\Delta V=\Delta x\Delta y\Delta z\Delta \nu\Delta \mu\Delta \varphi$ 表示立方体的体积。
+而光子的数量变化受到五个分开过程的影响~\cite{pomraning2005equations}，即
+
+(1)通过立方体的边界，光子净流出的速率，
+\begin{equation}\label{streaming}
+[\partial_x(\dot{x}f)+\partial_y(\dot{y}f)+\partial_z(\dot{z}f)+\partial_{\nu}(\dot{\nu}f)+\partial_{\mu}(\dot{\mu}f)+\partial_{\varphi}(\dot{\varphi}f)]\Delta V.
+\end{equation}
+
+(2)光子的吸收，
+\begin{equation}\label{absorption}
+c\sigma_a(\mathbf{r},\nu,t)f(r,\nu,n,t)\Delta V,
+\end{equation}
+这里~$\sigma_a(\mathbf{r},\nu,t)$ 是吸收系数，$c$ 代表光速。
+
+(3)散射出：从~$\nu$,$\mathbf{n}$ 散射到其他频率和方向的光子，
+\begin{equation}\label{outscattering}
+c\Delta V\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)f(\mathbf{r},\nu,\mathbf{n},t),
+\end{equation}
+这里~$\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)$ 是散射系数。
+
+(4)散射入：由其他频率和方向的光子散射到~$\nu$,$\mathbf{n}$ 的光子，
+\begin{equation}\label{inscattering}
+c\Delta V\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu'\rightarrow\nu,\mathbf{n}'\cdot\mathbf{n},t)f(\mathbf{r},\nu',\mathbf{n}',t).
+\end{equation}
+
+(5)光子的释放，
+\begin{equation}\label{emission}
+q(\mathbf{r},\nu,t)\Delta V,
+\end{equation}
+这里~$q(\mathbf{r},\nu,t)$ 是释放系数。
+所以，有光子数守恒，
+\begin{equation}\label{numberofphotosequation}
+\begin{array}{lll}
+\partial_t f(\nu,\Omega)+\partial_x(\dot{x}f)+\partial_y(\dot{y}f)+\partial_z(\dot{z}f)
+&+\partial_{\nu}(\dot{\nu}f)
++\partial_{\mu}(\dot{\mu}f)+\partial_{\varphi}(\dot{\varphi}f)
+=q(\nu)-c\sigma_a(\nu)f(\nu,n)\vspace{1ex}\\
+&+c\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu'\rightarrow\nu,\mathbf{n}'\cdot\mathbf{n},t)f(\nu',\mathbf{n}')\vspace{1ex}\\
+&-c\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)f(\nu,\mathbf{n}).
+\end{array}
+\end{equation}
+
+假定在固定空间坐标，光子之间碰撞沿直线运动，并且光子流中无频率的变化，我们有
+\begin{equation}
+\dot{\mu}=\dot{\varphi}=\dot{\nu}=0.
+\end{equation}
+所以可将系统~(\ref{numberofphotosequation}) 化简为
+\begin{equation}\label{numberofphotosequation_Rewrite}
+\begin{array}{lll}
+\partial_t f(\nu,\Omega)+c\mathbf{n}\cdot\nabla f(\nu,\mathbf{n})
+&=q(\nu)-c\sigma_a(\nu)f(\nu,n)\vspace{1ex}\\
+&+c\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu'\rightarrow\nu,\mathbf{n}'\cdot\mathbf{n},t)f(\nu',\mathbf{n}')\vspace{1ex}\\
+&-c\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)f(\nu,\mathbf{n}).
+\end{array}
+\end{equation}
+
+下面引入辐射比强度~$I=ch\nu f$，其中~$h$ 为普朗克常数。
+可将系统~(\ref{numberofphotosequation_Rewrite}) 转化为
+\begin{equation}\label{intensityradiationequation}
+\begin{array}{lll}
+\frac{1}{c}\partial_t I(\nu,\Omega)+\mathbf{n}\cdot\nabla I(\nu,\mathbf{n})
+&=S(\nu)-\sigma_a(\nu)f(\nu,n)\vspace{1ex}\\
+&+\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu'\rightarrow\nu,\mathbf{n}'\cdot\mathbf{n},t)I(\nu',\mathbf{n}')\vspace{1ex}\\
+&-\int^{\infty}_0d\nu'\int_{4\pi}d\mathbf{n}'\sigma_s(\nu\rightarrow\nu',\mathbf{n}\cdot\mathbf{n}',t)I(\nu,\mathbf{n}),
+\end{array}
+\end{equation}
+这里~$S=S(r,\nu,t)$ 满足
+\begin{equation}
+S(r,\nu,t)=h\nu q(r,\nu,t),
+\end{equation}
+表示由于自发过程释放的能量速率。
+考虑简化的源项~\cite{lowrie1999coupling}，
+\begin{equation}\label{transferequation}
+\frac{1}{c}\partial_tI+\mathbf{n}\cdot\nabla I=S_t(\nu,\mathbf{n}),~~~~~~S_t=S_a+S_s.
+\end{equation}
+这里~$S_a$ 表示光子的吸收和释放，采用文献~\cite{buet2004asymptotic} 的定义，
+\begin{equation}\label{S_a}
+S_a(\nu,\mathbf{n})=\frac{\nu_0}{\nu}\sigma_a(\nu_0)[(\frac{\nu}{\nu_0})^3B(\nu_0,T)-I],
+\end{equation}
+其中
+\begin{equation}\label{B_a}
+B(\nu_0,T)=\frac{2h\nu^3_0}{c^2}(e^{h\nu_0/KT}-1)^{-1}.
+\end{equation}
+$S_s$ 表示光子的散射，
+\begin{equation}\label{S_s}
+S_s(\nu,\mathbf{n})=\frac{\nu^2}{\nu^2_0}(S_s)_0(\nu_0,\mathbf{n}_0),
+\end{equation}
+其中
+\begin{equation}\label{B_s}
+(S_s)_0(\nu_0,\mathbf{n}_0)=\sigma_s(\nu_0)[\frac{1}{4\pi}\int I(\nu_0,\mathbf{n}'_0)d\mathbf{n'_0}-I_0(\nu_0,\mathbf{n}_0)].
+\end{equation}
+
+对方程~(\ref{transferequation}) 分别取~$\{1,\mathbf{n}\}$-矩，并在~$\mathbf{n}$ 上求积分~\cite{lowrie1999coupling}，可得
+\begin{equation}\label{moments}
+\left\{
+\begin{array}{ll}
+\partial_t E_{\nu}+\nabla \cdot F_\nu=S_E,\vspace{1ex}\\
+ \frac{1}{c^2}\partial_t F_{\nu}+\nabla \cdot P_\nu=S_F,\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+其中
+\begin{equation}\label{moments_EF}
+E_\nu=\frac{1}{c^2}\oint_nId\mathbf{n},~~~F_\nu=\oint_n\mathbf{n}Id\mathbf{n},~~~P_\nu=\frac{1}{c}\oint_n\mathbf{n}\otimes\mathbf{n}Id\mathbf{n},
+\end{equation}
+\begin{equation}\label{moments_SEF}
+S_{E_\nu}=\oint_nSd\mathbf{n},~~~S_{F_\nu}=\frac{1}{c}\oint_n\mathbf{n}Sd\mathbf{n}.
+\end{equation}
+对系统~(\ref{moments}) 在所有频率上求积分可得
+\begin{equation}\label{moments_integrating}
+\left\{
+\begin{array}{ll}
+\partial_t E_r+\nabla \cdot F_r=S_E,\vspace{1ex}\\
+ \frac{1}{c^2}\partial_t F_r+\nabla \cdot P_r=S_F,\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+其中~$E_r$ 表示所有光子的能量，$S_E$、$S_F$ 分别表示辐射与物质场作用过程中，辐射能量的增加或损失、辐射动量的增加或损失。$\frac{F_r}{c^2}$ 表示光子的动量。
+
+下面考虑将辐射与流体的耦合。物质与辐射场之间动量与能量的交换是由光子的吸收、散射、释放过程完成的。
+通过物质，辐射的吸收和释放分别使得系统产生加热和冷却。而大量的辐射传输直接关系温度梯度和能量梯度的存在。
+当有足够的时间时，压力梯度将会产生大量的流动并会改变物质的密度。随着温度的升高，热辐射在物理问题中的重要性也是越来越高。
+在适当的温度下，热辐射是主要传输能量的一种。而在较高的温度时，辐射场的能量和动量密度将可能大于流体中相应的量，从而对流动起到主导作用。
+为了能够保持总能量守恒，将流体能量守恒方程修正为~\cite{lowrie1999coupling}
+\begin{equation}\label{energy_equation_coupling}
+\partial_t(\rho E)+\nabla\cdot[(\rho E+p)u]=-S_{E},
+\end{equation}
+流体的动量方程修正为
+\begin{equation}\label{momentum_equation_coupling}
+\partial_t(\rho u)+\nabla\cdot(\rho u\otimes u)+\nabla p=-S_F,
+\end{equation}
+并可以进一步写为辐射和物质的总动量和总能量守恒的形式，
+\begin{equation}\label{momentum_equation_coupling_totall}
+\partial_t(\rho u+\frac{1}{c^2}F_r)+\nabla\cdot(\rho u\otimes u+P_r)+\nabla p=0,
+\end{equation}
+\begin{equation}\label{energy_equation_coupling_totall}
+\partial_t(\rho E+E_r)+\nabla\cdot[(\rho E+p)u+F_r]=0.
+\end{equation}
+
+对于辐射流体力学方程组的研究，将其转换为无量纲的形式是有帮助的。
+引入流体力学尺度，
+\begin{equation}
+\begin{array}{lll}
+x=\hat{x}l,~~~t=\hat{t}l/a_\infty,~~~\rho=\hat{\rho}\rho_\infty,~~~u=ua_\infty,\\
+p=\hat{p}\rho_\infty,~~~T=\hat{T}T_\infty,~~~u=\hat{u}kT_\infty/h,~~~I=\hat{I}hcP_rT^3_\infty/k,\\
+\sigma_a=\hat{\sigma}_a/\lambda_a,~~~\sigma_s=\hat{\sigma}_s/\lambda_s,
+\end{array}
+\end{equation}
+这里~$a_\infty$ 是流体速度，插入符号``$\wedge$"表示无量纲的量。%，且$P_r=\frac{8\pi^5k^4}{15c^3h^3}$。
+下面所有的量均为无量纲的，为了方便书写，现将插入符号去掉，
+可得方程组~\cite{lowrie1999coupling}，
+\begin{equation}\label{non-dimensional}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho+\nabla\cdot(\rho {u})=0,\vspace{1ex}\\
+ \partial_t(\rho {u})+\nabla\cdot(\rho {u}^2+pI)=-\mathscr{P}S_F,\vspace{1ex}\\
+ \partial_t(\rho E)+\nabla\cdot(( E+pI){u})=-\mathscr{P}\mathscr{C}S_E,\vspace{1ex}\\
+ \frac{1}{\mathscr{C}}\partial_tI+\mathbf{n}\cdot\nabla I=S(\nu,\mathbf{n}),
+\end{array}
+\right.
+\end{equation}
+这里
+\begin{equation}
+\begin{array}{ll}
+S(\nu,\mathbf{n})&=\mathscr{L}\frac{\nu_0}{\nu}[(\frac{\nu}{\nu_0})^3B(\nu_0,T)-I]\vspace{1ex}\\
+&+\mathscr{L}\mathscr{L_s}\frac{\nu_0}{\nu}\sigma_s(\nu_0)[(\frac{\nu}{\nu_0})^3\frac{1}{4\pi}\int\frac{\nu_0}{\nu'}I(\nu',\mathbf{n}')d\mathbf{n}'-I],
+\end{array}
+\end{equation}
+其中$\mathscr{L}=\frac{1}{\lambda_a}$，$\mathscr{L_s}=\frac{\lambda_a}{\lambda_s}$，$\lambda_s$ 光子散射平均自由路径。
+由系统~(\ref{non-dimensional}) 可得
+\begin{equation}\label{non-dimensional_rewrite}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho+\nabla\cdot(\rho {u})=0,\vspace{1ex}\\
+ \partial_t(\rho {u}+\frac{\mathscr{P}}{\mathscr{C}}F_r)+\nabla\cdot(\rho u\otimes u+pI+\mathscr{P}P_r)=0,\vspace{1ex}\\
+ \partial_t(\rho E+\mathscr{P}E_r)+\nabla\cdot(( \rho E+p){u}+\mathscr{P}\mathscr{C}F_r)=0,\vspace{1ex}\\
+ \frac{1}{\mathscr{C}}\partial_tI+\mathbf{n}\cdot\nabla I=S(\nu,\mathbf{n}),
+\end{array}
+\right.
+\end{equation}
+这里
+\begin{equation}
+E_r=\int\int Id\nu d\mathbf{n},~~~F_r=\int\int\mathbf{n}Id\nu d\mathbf{n},~~~P_r=\int\int\mathbf{n}\otimes\mathbf{n}Id\nu d\mathbf{n}.
+\end{equation}
+
+依次研究两个不同的机制~\cite{buet2004asymptotic}:
+
+(1)平衡扩散机制，
+\begin{equation}
+\mathscr{P}=O(1),~~~\mathscr{C}=O(\varepsilon^{-1}),~~~\mathscr{L}_s=O(\varepsilon^2),~~~\mathscr{L}=O(\varepsilon^{-1}).
+\end{equation}
+
+(2)非平衡扩散机制，
+\begin{equation}
+\mathscr{P}=O(1),~~~\mathscr{C}=O(\varepsilon^{-1}),~~~\mathscr{L}_s=O(\varepsilon^{-2}),~~~\mathscr{L}=O(\varepsilon^{1}).
+\end{equation}
+将这两种机制代入系统~(\ref{non-dimensional_rewrite}) 可得两种不同扩散极限下的辐射流体力学方程组。
+
+\BiSubsection{平衡扩散极限下的辐射流体力学方程组}{Radiation hydrodynamical equations in the equilibrium diffusion limit}
+假定有
+\begin{equation}
+\mathscr{P}=O(1),~~~\mathscr{C}=O(\varepsilon^{-1}),~~~\mathscr{L}_s=O(\varepsilon^2),~~~\mathscr{L}=O(\varepsilon^{-1}).
+\end{equation}
+首先，可将系统~(\ref{non-dimensional}) 中第四个方程改写为~\cite{buet2004asymptotic}，
+\begin{equation}\label{nondimensional_transferequation}
+\partial_tI+\frac{1}{\varepsilon}\mathbf{n}\cdot\nabla I=\frac{1}{\varepsilon^2}\frac{\nu_0}{\nu}\sigma_a[(\frac{\nu}{\nu_0})^3B(\nu_0,T)-I]+O(1).
+\end{equation}
+由关系式，
+\begin{equation}\label{TE}
+\begin{array}{llll}
+T=T_0+\varepsilon T_1+O(\varepsilon^2),\vspace{1ex}\\
+\nu=\nu_0+\nu_0\varepsilon n\cdot u+O(\varepsilon^2),\vspace{1ex}\\
+B(\nu_0,T)=B(\nu,T)-\varepsilon\nu n\cdot u\partial_{\nu}B(\nu,T)+O(\varepsilon^2),\vspace{1ex}\\
+I=I_0+\varepsilon I_1+O(\varepsilon^2),\vspace{1ex}\\
+\end{array}
+\end{equation}
+%\begin{equation}\label{nondimensional_transferequation_equilibrium}
+%\frac{\partial}{\partial t}I+\frac{1}{\varepsilon}\mathbf{n}\cdot\nabla I=\frac{1}{\varepsilon^2}D_{-2}+\frac{1}{\varepsilon^1}D_{-1}+O(1).
+%\end{equation}
+代入~(\ref{nondimensional_transferequation}) 可得
+\begin{equation}
+B(\nu,T_0)-I^{0}=0,
+\end{equation}
+\begin{equation}
+\sigma_a[\partial_TB(\nu,T_0)T_1+\mathbf{n}\cdot u(3-\nu\partial_\nu)B(\nu,T_0)-I^1(\nu,\mathbf{n})]=\mathbf{n}\cdot\nabla I^0.
+\end{equation}
+因此有，
+\begin{equation}
+E_r=\int\int I^0(\nu,\mathbf{n})d\nu d\mathbf{n}+O(\varepsilon)=T^4_0+O(\varepsilon),
+\end{equation}
+\begin{equation}
+F_r=\int\int (I^0(\nu,\mathbf{n})+\varepsilon I^1)d\nu d\mathbf{n}+O(\varepsilon^2)=\varepsilon[u\frac{4}{3}T^4_0-\frac{1}{3\sigma_a}\nabla T^4_0]+O(\varepsilon^2),
+\end{equation}
+\begin{equation}
+P_r=\int\int (I^0(\nu,\mathbf{n})+\varepsilon I^1)\mathbf{n}\cdot\mathbf{n}d\nu d\mathbf{n}+O(\varepsilon^2)
+=\frac{1}{3}T^4_0+O(\varepsilon).
+\end{equation}
+可得精度为~$O(\varepsilon)$ 的系统，
+\begin{equation}\label{equilibrium_exact0}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho^0+\nabla\cdot(\rho^0 {u^0})=0,\vspace{1ex}\\
+ \partial_t(\rho^0 {u^0})+\nabla\cdot(\rho^0 u^0\otimes u^0+(p+\frac{1}{3}T^4_0)I)=0,\vspace{1ex}\\
+ \partial_t(\rho^0 E^0+T^4_0)+\nabla\cdot(( \rho^0 E^0+T^4_0){u^0}+(p_0+\frac{1}{3}T^4_0)u^0-\frac{1}{3\sigma_a}\nabla T^4_0)=0.\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+并可写为，
+\begin{equation}\label{equilibrium_exact0}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho+\nabla\cdot(\rho {u})=0,\vspace{1ex}\\
+ \partial_t(\rho {u})+\nabla\cdot(\rho u\otimes u+(p+p_r)I)=0,\vspace{1ex}\\
+ \partial_t(\rho E+E_r)+\nabla\cdot((\rho E+E_r){u}+(p+p_r)u=\nabla\cdot(\frac{1}{3\sigma_a}\nabla T^4),\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+这里~$E_r=T^4$，$p_r=\frac{1}{3}T^4$.
+\BiSubsection{非平衡扩散极限下的灰度辐射流体力学方程组}{Radiation hydrodynamical equations in the grey nonequilibrium diffusion limit}
+假定有
+\begin{equation}
+\mathscr{P}=O(1),~~~\mathscr{C}=O(\varepsilon^{-1}),~~~\mathscr{L}_s=O(\varepsilon^{-2}),~~~\mathscr{L}=O(\varepsilon^{1}).
+\end{equation}
+类似于上一节可得~\cite{buet2004asymptotic}，
+\begin{equation}
+E_r=\int\int I^0(\nu,\mathbf{n})d\nu d\mathbf{n}+O(\varepsilon)=T^4_r+O(\varepsilon),
+\end{equation}
+\begin{equation}
+F_r=\int\int (I^0(\nu,\mathbf{n})+\varepsilon I^1)d\nu d\mathbf{n}+O(\varepsilon^2)=\varepsilon[u\frac{4}{3}T^4_r-\frac{1}{3\sigma_a}\nabla T^4_r]+O(\varepsilon^2),
+\end{equation}
+\begin{equation}
+P_r=\int\int (I^0(\nu,\mathbf{n})+\varepsilon I^1)\mathbf{n}\cdot\mathbf{n}d\nu d\mathbf{n}+O(\varepsilon^2)
+=\frac{1}{3}T^4_r+O(\varepsilon).
+\end{equation}
+可得精度为~$O(\varepsilon)$ 的系统，
+\begin{equation}\label{nonequilibrium_exact0}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho^0+\nabla\cdot(\rho^0 {u^0})=0,\vspace{1ex}\\
+ \partial_t(\rho^0 {u^0})+\nabla\cdot(\rho^0 u^0\otimes u^0+(p+\frac{1}{3}T^4_r)I)=0,\vspace{1ex}\\
+ \partial_t(\rho^0 E^0+T^4_r)+\nabla\cdot(( \rho^0 E^0+T^4_r){u^0}+(p_0+\frac{1}{3}T^4_r)u^0-\frac{1}{3\sigma_a}\nabla T^4_r)=0.\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+为了封闭系统~(\ref{nonequilibrium_exact0})，
+有
+\begin{equation}
+\frac{\partial}{\partial t}E_r+\nabla\cdot(uE_r)+p_r\nabla\cdot u=
+\sigma_a(T^4_0-T^4_r)+\nabla\cdot(\frac{1}{3\sigma_s}\nabla T^4_r)+O(\varepsilon).
+\end{equation}
+类似上节，可得非平衡扩散极限下的辐射流体力学模型，
+\begin{equation}\label{Nonequilibrium_exact1}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho+\nabla\cdot(\rho {u})=0,\vspace{1ex}\\
+ \partial_t(\rho {u})+\nabla\cdot(\rho u\otimes u+(p+p_r)I)=0,\vspace{1ex}\\
+ \partial_t(\rho E+E_r)+\nabla\cdot((\rho E+E_r){u}+(p+p_r)u=\nabla\cdot(\frac{1}{3\sigma_a}\nabla T^4_r),\vspace{1ex}\\
+ \partial_tE_r+\nabla\cdot(uE_r)+p_r\nabla\cdot u=\nabla\cdot(\frac{1}{3\sigma_s}\nabla T^4_r)+\sigma_a(T^4-T^4_r),
+\end{array}
+\right.
+\end{equation}
+这里~$E_r=T^4_r$，$p_r=\frac{1}{3}T^4_r$.
+
+
+\BiSection{本文章节安排}{Chapter Arrangement}
+本文将研究内容将分为四章介绍。
+第二章介绍对于平衡扩散极限下一维辐射流体力学方程组~(\ref{equilibrium_model_introduction}) 求解的显隐式格式，使用~MUSCL-Hancock 方法求解流体与辐射耦合在一起的双曲部分，再使用中心有限体积格式求解其扩散部分。
+第三章介绍求解非平衡扩散极限下的一维灰度辐射流体力学方程组~(\ref{nonequilibrium_model_introduction}) 的显隐格式，
+使用~MUSCL-Hancock 方法求解系统的双曲部分，使用隐式有限体积格式求解辐射扩散部分，应用得到的辐射熵公式减少了需要计算的非线性方程组数量。
+第四章介绍求解二维辐射流体力学方程组~(平衡扩散极限下二维辐射流体力学方程组和非平衡扩散下的二维灰度辐射流体力学方程组) 的显隐格式，其中扩散部分使用了~TR/BDF2 的变化形式，并证明了该方法是渐近保持的。
+第五章研究了使用松弛方法求解低能量密度的辐射流体方程组，并将~Euler 坐标下直接地~GRP 方法应用到该模型中。
+
+
+
+
+
+
+
+
+
+
+
+
