@@ -1,0 +1,1064 @@
+% !Mode:: "TeX:UTF-8"
+
+\BiChapter{对流扩散方程组的松弛方法}{Dissipation problem of convection-diffusion equation}
+本章将介绍了对流扩散方程组的松弛方法，将~Euler 坐标下直接地~GRP 方法应用到该模型中，并将该方法拓展到该系统的二维情况。这也为将该算法应用到辐射流体力学模型中提供了可能。最后，通过数值实验展现了该算法的表现。
+\BiSection{对流扩散模型和该模型的松弛方法}{The convection-diffusion model}
+假定流体模型为，
+\begin{equation}\label{eq:radiation1}
+\left\{
+\begin{array}{lll}
+ \partial_t\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t(\rho {u})+\partial_x(\rho {u}^2+p)=0,\vspace{1ex}\\
+ \partial_t(\rho E)+\partial_x(( \rho E+p){u})=\partial_x(\kappa(\rho,T)\partial_x T),
+\end{array}
+\right.
+\end{equation}
+这里~$\rho$，$u$，$p$，$\rho E=\frac{\rho u^2}{2}+\rho e$，$T$，$e$ 分别表示密度，速度，压力，总能量，温度，比热内能。
+对于理想气体，有状态方程
+\begin{equation*}
+p=p(\rho,e) = (\gamma-1)\rho e,
+\end{equation*}
+这里~$\gamma$ 是流体的比热率。
+
+下面介绍求解系统~(\ref{eq:radiation1}) 的松弛方法。
+将方程组~(\ref{eq:radiation1}) 写作，
+\begin{equation}\label{eq:radiation2}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t(\rho {u})+\partial_x(\rho {u}^2+p)=0,\vspace{1ex}\\
+ \partial_t(\rho E)+\partial_x(( \rho E+p){u})=\partial_xq,\vspace{1ex}\\
+ \partial_tq+\beta_{*}\partial_xq=\frac{\kappa(\rho,T)\partial_x T-q}{\alpha_{*}},
+\end{array}
+\right.
+\end{equation}
+其中~$\alpha_{*},\beta_{*}$ 为参数。
+
+本章采用等空间网格点~$x_j=j\Delta x$，定义在网格~$I_j=[x_{j-\frac{1}{2}},x_{j+\frac{1}{2}}]$ 边界点为~$x_{j+\frac{1}{2}}=\frac{(x_j+x_{j+1})}{2}$。
+对于系统~(\ref{eq:radiation1}) 的数值方法可通过以下步骤实现：
+
+\textbf{第一步}：首先，求解系统~(\ref{eq:radiation2}) 的第四个方程
+\begin{equation}\label{eq:govern-4}
+\partial_tq+\beta_{*}\partial_xq=\frac{\kappa(\rho,T)\partial_x T-q}{\alpha_{*}}.
+\end{equation}
+对方程~(\ref{eq:govern-4}) 使用隐式格式进行求解，这里采用~Crank-Nicolson 方法，
+\begin{equation}\label{eq:govern-4_numbermethod}
+\frac{q^{n+1}_j-q^n_j}{\Delta t}+\frac{\beta_*}{2}(\frac{q^{n+1}_{j+1}-q^{n+1}_{j-1}}{2\Delta x}+\frac{q^n_{j+1}-q^n_{j-1}}{2\Delta x})+\frac{1}{2\alpha_*}(q^{n+1}_j+q^n_j)=\frac{k^n_j}{\alpha_*}\frac{T^n_{j+1}-T^n_{j-1}}{2\Delta x}.
+\end{equation}
+然后，由二阶差分公式可得~$\partial_x q$ 的数值解，并令~$M=\frac{q^{n+1}_{j+1}-q^{n+1}_{j-1}}{2\Delta x}$.
+
+\textbf{第二步}：将~GRP 算法应用到系统~(\ref{eq:radiation2}) 的前三个方程中
+\begin{equation}\label{eq:govern-13}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t(\rho {u})+\partial_x(\rho {u}^2+p)=0,\vspace{1ex}\\
+ \partial_t(\rho E)+\partial_x(( \rho E+p){u})=M,
+\end{array}
+\right.
+\end{equation}
+并更新其他变量，值得注意的是这里的~$M$ 是由\textbf{第一步}中计算得到的，在系统~(\ref{eq:govern-13}) 中为已知量。
+
+\BiSection{GRP 格式的实施}{Implementation of the GRP scheme}
+将系统~(\ref{eq:govern-13}) 写为一般的形式，
+\begin{equation}\label{eq:govern-eq}
+\frac{\partial U}{\partial t}+\frac{\partial {F}(U)}{\partial x}=Q,
+\end{equation}
+这里
+\begin{equation}\label{eq:govern-var}
+\bm{U}=
+\begin{bmatrix}
+\rho\\
+\rho u\\
+\rho E\\
+\end{bmatrix},\quad
+\bm{F(U)}=
+\begin{bmatrix}
+\rho u\\
+\rho u^2 + p\\
+u(\rho E + p)\\
+\end{bmatrix},\quad
+\bm{Q}=
+\begin{bmatrix}
+0\\
+0\\
+M\\
+\end{bmatrix}.
+\end{equation}
+
+%采用等空间网格点~$x_j=j\Delta x$，定义在网格~$I_j=[x_{j-\frac{1}{2}},x_{j+\frac{1}{2}}]$ 边界点为~$x_{j+\frac{1}{2}}=\frac{(x_j+x_{j+1})}{2}$。
+采用上节定义的网格，令~$U^n_j$ 是~$t_n=n\Delta t$ 时刻~$U$ 在网格~$I_j$ 的均值。并假定在~$t=t_n$ 时刻的数据是分片线性的，且斜率为~$\sigma_j^n$。
+在网格~$I_j$ 上，有
+\begin{equation}\label{eq:piecewise_linear}
+U(x,t_n)=U^n_j+\sigma_j^n(x-x_j),~~~~x\in(x_{j-\frac{1}{2}},x_{j+\frac{1}{2}}).
+\end{equation}
+如文献~\cite{2006A}，下面介绍~GRP 方法的主要步骤:
+
+\textbf{第一步}：给定分片线性数据~(\ref{eq:piecewise_linear})，计算得到
+\begin{equation}\label{GRP:mid_point}
+U^{n+\frac{1}{2}}_{j+\frac{1}{2}}=U^{n}_{j+\frac{1}{2}}+\frac{\Delta t}{2}(\frac{\partial U}{\partial t})^n_{j+\frac{1}{2}},~~~j=0,1,\ldots,
+\end{equation}
+这里~$U^{n+\frac{1}{2}}_{j+\frac{1}{2}}$ 是变量~$U$ 在时间~$[t_n,t_{n+1}]$ 网格界面~$x=x_{j+\frac{1}{2}}$ 上的中点值。$(\frac{\partial U}{\partial t})^n_{j+\frac{1}{2}}$ 可由定理\ref{thm:temporal-pu-nonsonic}、\ref{thm:temporal-pu-sonic}、\ref{thm:drho-dt}、\ref{thm:acoustic}
+%\label{thm:temporal-pu-sonic}\label{thm:drho-dt}\label{thm:acoustic}}
+得到。
+$U^n_{j+\frac{1}{2}}=U^A(x_{j+\frac{1}{2}},t_n)$ 是~$(x_{j+\frac{1}{2}},t)$ 时刻下面黎曼问题的局部解，
+\begin{equation}\label{eq:govern_riemann_problem}
+\begin{array}{lll}
+\frac{\partial U}{\partial t}+\frac{\partial F(U)}{\partial x}=0, ~~~x>0,~t>t_n,\vspace{1ex} \\
+U(x,t_n)=
+\left\{
+\begin{array}{ll}
+U_L:=U^n_j+(x_{j+\frac{1}{2}}-x_{j})\sigma^n_j,~~~x<x_{j+\frac{1}{2}},\\
+U_R:=U^n_{j+1}+(x_{j+\frac{1}{2}}-x_{j+1})\sigma^n_{j+1},~~~x<x_{j+\frac{1}{2}},
+\end{array}
+\right.
+\end{array}
+\end{equation}
+该数值解可以通过精确黎曼解法器或近似黎曼解法器获得。
+
+\textbf{第二步}：利用公式
+\begin{equation}\label{GRP:update}
+U^{n+1}_j=U^n_j-\frac{\Delta t}{\Delta x}(F(U^{n+\frac{1}{2}}_{j+\frac{1}{2}})-F(U^{n+\frac{1}{2}}_{j-\frac{1}{2}}))+\Delta tQ_j,
+\end{equation}
+更新网格均值~$U_j^{n+1}$。
+
+\textbf{第三步}：通过下面步骤更新斜率~\cite{ben2006direct}，
+\begin{equation*}\label{GRP:update_slope}
+\begin{array}{ll}
+U^{n+1,-}_{j+\frac{1}{2}}=U^{n}_{j+\frac{1}{2}}+\Delta t(\frac{\partial U}{\partial t})^n_{j+\frac{1}{2}},\\
+\sigma^{n+1,-}_{j+\frac{1}{2}}=\frac{1}{\Delta x}(\Delta U)^{n+1,-}_{j}=\frac{1}{\Delta x}(U^{n+1,-}_{j+\frac{1}{2}}-U^{n+1,-}_{j-\frac{1}{2}}).
+\end{array}
+\end{equation*}
+为了能够抑制间断附近的震荡，这里应用单调的斜率限制器，
+\begin{equation*}\label{GRP:slope_limiter}
+\sigma^{n+1}_j=minmod(\theta\frac{U^{n+1}_j-U^{n+1}_{j-1}}{\Delta x},\sigma^{n+1,-}_j,\theta\frac{U^{n+1}_{j+1}-U^{n+1}_{j}}{\Delta x}),
+\end{equation*}
+其中参数~$\theta\in[0,2)$。
+
+\BiSection{中心稀疏波求解}{Resolution of the centerd rarefaction wave}
+利用文献~\cite{ben2006direct,li2017thermodynamical} 中的方法得到流动变量在奇点~$(0,0)$ 处的时间导数。
+本节考虑左稀疏波求解，
+\begin{equation}\label{eq:def-psi}
+\psi=u+\int^\rho\frac{c(\omega,S)}{\omega}d\omega.%\quad \phi=u-\int^\rho\frac{c(\omega,S)}{\omega}d\omega.
+\end{equation}
+熵可由~Gibbs 关系得到
+\begin{equation}\label{eq:Gibbs}
+TdS=de-\frac{p}{\rho^2}d\rho.
+\end{equation}
+由控制方程~\eqref{eq:govern-eq} 和~\eqref{eq:govern-var} 可推导出以下关系式。
+首先，由质量守恒和动量守恒可得
+\begin{equation}\label{eq:D0rhov}
+\begin{array}{ll}
+\displaystyle\frac{D \rho}{D t} + \rho\left(\frac{\partial u}{\partial x}\right)=0, \qquad
+\displaystyle\frac{D u}{D t} + \frac{1}{\rho}\left(\frac{\partial p}{\partial x}\right) = 0,
+\end{array}
+\end{equation}
+其中全导数的定义为
+\begin{equation*}
+\displaystyle\frac{D}{D t}=\frac{\partial}{\partial t}+u\frac{\partial}{\partial x}.
+\end{equation*}
+利用~Gibbs 关系式~\eqref{eq:Gibbs}，
+可由系统~\eqref{eq:govern-eq} 中的能量守恒方程得
+\begin{equation}\label{eq:D0S}
+\frac{D S}{D t} = \frac{M}{\rho T}.
+\end{equation}
+通过局部声速的定义~$c^2= \frac{\partial p(\rho,S)}{\partial \rho}$，由状态方程求微分可得
+\begin{equation}\label{eq:p-EOS}
+dp = c^2 d\rho + \frac{\partial p}{\partial S} dS.
+\end{equation}
+联合~\eqref{eq:D0S}、\eqref{eq:p-EOS} 与~\eqref{eq:D0rhov} 的第一个方程可得
+\begin{equation}\label{eq:D0pu}
+\frac{D p}{D t} + \rho c^2\left(\frac{\partial u}{\partial x}\right) = \frac{M}{\rho T}\frac{\partial p}{\partial S}.
+\end{equation}
+并定义两个方向导数，
+\begin{equation*}
+\displaystyle\frac{D_+}{D t}=\frac{\partial}{\partial t}+(u+c)\frac{\partial}{\partial x},\quad \displaystyle\frac{D_-}{D t}=\frac{\partial}{\partial t}+(u-c)\frac{\partial}{\partial x}.
+\end{equation*}
+由~\eqref{eq:D0pu} 和~\eqref{eq:D0rhov} 中的第二个方程可得
+\begin{equation}\label{eq:D_+-up}
+{\frac{D_+ u}{D t} + \frac{1}{\rho c}\frac{D_+ p}{D t} = \frac{M}{\rho^2cT}\frac{\partial p}{\partial S}, \quad\frac{D_- u}{D t} - \frac{1}{\rho c}\frac{D_- p}{D t} = - \frac{M}{\rho^2cT}\frac{\partial p}{\partial S}}.
+%\frac{\partial u}{\partial t}+(u+c)\frac{\partial u}{\partial x}+v\frac{\partial u}{\partial y} + \frac{1}{\rho c}\left(\frac{\partial p}{\partial t}+(u+c)\frac{\partial p}{\partial x}+v\frac{\partial p}{\partial y}\right) = - c\frac{\partial v}{\partial y},
+\end{equation}
+$\psi$ 微分可得
+\begin{align}
+d\psi &= d u + \frac{c}{\rho}d\rho + \frac{\partial \psi}{\partial S} dS = d u + \frac{1}{\rho c}dp + K(\rho,S)dS,\label{eq:dpsi}%\\
+%d\phi &= d u - \frac{c}{\rho}d\rho + \frac{\partial \phi}{\partial S} dS = d u - \frac{1}{\rho c}dp - K(\rho,S)dS,
+\end{align}
+其中
+\begin{equation}\label{eq:K-general}
+K(\rho,S) = \int^\rho \frac{1}{\omega}\frac{\partial c(\omega,S)}{\partial S}d\omega - \frac{1}{\rho c}\frac{\partial p}{\partial S}.
+\end{equation}
+方程~\eqref{eq:dpsi} 描述了动力学量与热力学量的关系。
+将~\eqref{eq:D0S} 和~\eqref{eq:D_+-up} 代入~\eqref{eq:dpsi} 中，可得~$\psi$ 的方向导数
+\begin{equation}\label{eq:Dpsi-Dtau}
+\frac{D_+ \psi}{Dt} =
+\frac{\partial\psi}{\partial t}+(u+c)\frac{\partial\psi}{\partial x} = cK(\rho,S)\frac{\partial S}{\partial x}+K(\rho,S)\frac{M}{\rho T}+\frac{M}{\rho^2cT}(\frac{\partial p}{\partial S})_\rho=cK(\rho,S)\frac{\partial S}{\partial x}+G(x,t),
+%\frac{D_- \phi}{Dt} &= -K(\rho,S)\frac{D_- S}{Dt} +c \frac{\partial v}{\partial y} = cK(\rho,S)\frac{\partial S}{\partial x} +c \frac{\partial v}{\partial y},\quad \mbox{ along } C_-.
+\end{equation}
+其中~$G(x,t)=K(\rho,S)\frac{M}{\rho T}+\frac{M}{\rho^2cT}(\frac{\partial p}{\partial S})_\rho$.
+\begin{remark}
+对于多方气体，有~$G(x,t)=\frac{\gamma M}{\rho c}$.
+\end{remark}
+
+\begin{remark}
+对于多方气体，可以显式的定义黎曼不变量~\cite{ben2006direct}
+\begin{equation*}
+\psi=u+\frac{2c}{\gamma-1},
+\end{equation*}
+且有
+\begin{equation*}\label{eq:Gibbs-polytropic}
+TdS = \frac{dp}{(\gamma-1)\rho} - \frac{c^2}{(\gamma-1)\rho}d\rho,
+\end{equation*}
+其中~$c^2=\frac{\gamma p}{\rho}$。\eqref{eq:dpsi} 和~\eqref{eq:K-general} 式的具体形式为
+\begin{equation*}\label{eq:dpsi-polytropic}
+d\psi = d u + \frac{\gamma}{(\gamma-1)\rho c} dp - \frac{c}{(\gamma-1)\rho}d\rho,
+\end{equation*}
+和
+\begin{equation*}\label{eq:K-gamma}
+K(\rho,S) = \frac{1}{(\gamma-1)\rho c}\frac{\partial p}{\partial S} = \frac{1}{c}\frac{\partial e}{\partial S} = \frac{T}{c}.
+\end{equation*}
+\end{remark}
+\vspace{2mm}
+
+对于稀疏波，引入~$(\alpha,\beta)$ 坐标。
+令~$\alpha(x,t)=C_1$ 和~$\beta(x,t)=C_2$ 分别是积分曲线
+\begin{equation*}\label{eq:K-gamma}
+\frac{dx}{dt}=u+c,\quad \frac{dx}{dt}=u-c.
+\end{equation*}
+远离真空和奇点~$(0,0)$，$(x,t)\rightarrow (\alpha,\beta)$ 是一一对应的，有关系式
+\begin{equation*}\label{eq:inv-map-x}
+\begin{array}{ll}
+\frac{\partial \alpha}{\partial x}dx+\frac{\partial \alpha}{\partial t}dt=0,\vspace{1ex}\\
+\frac{\partial \beta}{\partial x}dx+\frac{\partial \beta}{\partial t}dt=0.
+\end{array}
+\end{equation*}
+同时~$(\alpha,\beta)\rightarrow (x,t)$，有
+\begin{equation}\label{eq:inv-map-x}
+\frac{\partial x}{\partial \alpha} = (u-c) \frac{\partial t}{\partial \alpha},\quad% +(v-v_L)* ?,\quad
+\frac{\partial x}{\partial \beta} = (u+c) \frac{\partial t}{\partial \beta}.%+(v-v_L)* ?,
+\end{equation}
+
+\begin{theorem}\label{lem:char-coordinate}
+考虑与~$u-c$ 对应的曲稀疏波。$t$ 对~$\alpha$ 偏导数定义为~$\Theta(\beta):=\frac{\partial t}{\partial \alpha}(0,\beta)$，有
+\begin{equation*}\label{eq:dTheta}
+\Pi(\beta;\beta_L):=\frac{\Theta(\beta)}{\Theta(\beta_L)} = \exp\left(\int_{\beta_L}^\beta \frac{1}{2c(0,\xi)}d\xi\right),
+\end{equation*}
+这里~$c(0,\beta)$ 是声速。
+%, {\color{blue}$\beta\in[\beta_L,\beta_*],\beta_L=u_L-c_L,\beta_*=u_*-c_{1*}$.}
+\end{theorem}
+\begin{proof}
+将~\eqref{eq:inv-map-x} 式分别对~$\beta$ 和~$\alpha$ 求偏导可得
+\begin{align*}
+\frac{\partial^2 x}{\partial \alpha \partial \beta} = \frac{\partial (u-c)}{\partial \beta}\frac{\partial t}{\partial \alpha} +
+(u-c)\frac{\partial^2 t}{\partial \alpha \partial \beta},\quad
+\frac{\partial^2 x}{\partial \alpha \partial \beta} = \frac{\partial (u+c)}{\partial \alpha}\frac{\partial t}{\partial \beta} +
+(u+c)\frac{\partial^2 t}{\partial \alpha \partial \beta}.
+\end{align*}
+由上式中的一个方程减去另一个方程可得
+\begin{equation}\label{eq:pt-papb}
+2c\frac{\partial^2 t}{\partial \alpha \partial \beta}=
+\frac{\partial (u-c)}{\partial \beta}\frac{\partial t}{\partial \alpha}-
+\frac{\partial (u+c)}{\partial t}\frac{\partial t}{\partial \beta}.
+\end{equation}
+令~$t(0,\beta) = 0$, 有方程
+\begin{equation}\label{eq:tau-beta}
+\frac{\partial t}{\partial \beta}(0,\beta) \equiv 0.
+\end{equation}
+由关系~$\big|\frac{\partial (u+c)}{\partial \alpha}\big| < \infty$ 和~$\frac{\partial (u-c)}{\partial \beta} =1$, \eqref{eq:pt-papb} 在~$\alpha=0$ 处可得
+\begin{equation}\label{eq:Theta-beta}
+\frac{\partial^2 t}{\partial \alpha \partial \beta}(0,\beta)=\frac{1}{2c(0,\beta,0)}\frac{\partial t}{\partial \alpha}(0,\beta)= \frac{\Theta(\beta)}{2c(0,\beta)},
+\end{equation}
+该式可以看作是常微分方程。
+将~\eqref{eq:Theta-beta} 从~$\beta_L$ 到~$\beta$ 求微分可得
+\begin{align*}
+\Pi(\beta;\beta_L)=\frac{\Theta(\beta)}{\Theta(\beta_L)}= \exp\left(\int_{\beta_L}^\beta \frac{1}{2c(0,\xi)}d\xi\right).
+\end{align*}
+\end{proof}
+
+\begin{remark}
+对于多方气体，熵的定义为
+\begin{equation*}
+S=p/\rho^\gamma,
+\end{equation*}
+局部声速为
+\begin{equation*}
+c^2=\gamma p/\rho.
+\end{equation*}
+通过稀疏波，密度的变化为
+\begin{equation*}
+\frac{\rho(0,\beta)}{\rho_L} = \left(\frac{c(0,\beta)}{c_L}\right)^{\frac{2}{\gamma-1}}.
+\end{equation*}
+$\Pi(\beta;\beta_L)$ 可以显式的表达为
+\begin{equation*}\label{eq:theta-beta}
+\Pi(\beta;\beta_L) = \left(\frac{c(0,\beta)}{c_L}\right)^{-\frac{1}{2\mu^2}},
+\end{equation*}
+其中~$\displaystyle\mu^2=\frac{\gamma-1}{\gamma+1}$.
+\end{remark}
+\vspace{2mm}
+
+接下来，研究穿过特征值~$u-c$ 所对应曲线稀疏波的熵变化。沿着粒子轨迹，熵函数~$S$ 保持常数。
+\begin{equation*}\label{eq:K-gamma}
+\frac{\partial S}{\partial t}+u\frac{\partial S}{\partial x}=0.
+\end{equation*}
+由文献~\cite{li2017thermodynamical} 可得定理~\ref{lem:dSx}:
+\begin{theorem}\label{lem:dSx}
+穿过特征值~$u-c$ 所对应的曲线稀疏波，$S_x(0,\beta)$ 满足以下关系
+\begin{equation}\label{eq:dSx}
+\frac{S_x(0,\beta)}{(S_x)_L} = \frac{c_L}{c(0,\beta)}\Pi(\beta;\beta_L)^{-2}. %= \frac{\rho(0,\beta)}{\rho_L}.
+\end{equation}
+%where the last equality is derived from \eqref{eq:dTheta-2}.
+对于多方气体，该关系式可写为
+\begin{equation*}\label{eq:K-gamma}
+\frac{TS_x(0,\beta)}{T_LS^{'}_L}=(\frac{c(0,\beta)}{c_L})^{\frac{1}{\mu^2}+1}.
+\end{equation*}
+%The same result also holds for $\zeta$ and $z$ for they are constant along the particle path as $S$ does.% satisfy equations in \eqref{eq:D0zetaz} which have the same form as that of \eqref{eq:D0S}.
+\end{theorem}
+%\begin{proof}
+%由方程~\eqref{eq:inv-map-x} 和~\eqref{eq:D0S}, 熵~$S$ 对特征坐标求导满足
+%\begin{equation}\label{eq:S-beta}
+%\begin{array}{rl}
+%\displaystyle \frac{\partial S}{\partial \beta} &=\displaystyle  \frac{\partial S}{\partial t}\frac{\partial t}{\partial \beta} + \frac{\partial S}{\partial x}\frac{\partial x}{\partial \beta} \\[3mm]
+%&\displaystyle =\frac{\partial t}{\partial \beta}\left(\frac{\partial S}{\partial t}+\frac{\partial S}{\partial x}\frac{dx}{dt}\right)\\[3mm]
+%&\displaystyle =\frac{\partial t}{\partial \beta}\left(\frac{\partial S}{\partial t}+(u+c)\frac{\partial S}{\partial x}\right)\\[3mm]
+%&\displaystyle = \frac{\partial t}{\partial \beta}\left(\frac{D_+ S}{\partial t}\right) \\[3mm]
+%&\displaystyle =\frac{\partial t}{\partial \beta} \left(c \frac{\partial S}{\partial x}\right).
+%\end{array}
+%\end{equation}
+%同理，有
+%\begin{equation}\label{eq:S-alpha}
+%\begin{array}{rl}
+%\displaystyle \frac{\partial S}{\partial \alpha}=\frac{\partial t}{\partial \alpha} \left(-c \frac{\partial S}{\partial x}\right).
+%\end{array}
+%\end{equation}
+%\iffalse
+%\begin{align}
+%\frac{\partial S}{\partial \beta} &= \frac{\partial S}{\partial t}\frac{\partial t}{\partial \beta} +
+%\frac{\partial S}{\partial x}\frac{\partial x}{\partial \beta} +\frac{\partial S}{\partial y}\frac{\partial y}{\partial \beta} \\
+%&=\frac{\partial t}{\partial \beta}(\frac{\partial S}{\partial t}+\frac{\partial S}{\partial x}\frac{dx}{dt} +\frac{\partial S}{\partial y}\frac{dy}{dt})\\
+%&=\frac{\partial t}{\partial \beta}(\frac{\partial S}{\partial t}+(u+c)\frac{\partial S}{\partial x}+v_L\frac{\partial S}{\partial y})\\
+%&= \frac{\partial t}{\partial \beta}(\frac{D_+ S}{\partial t}+(v_L-v)\frac{\partial S}{\partial y}) \\
+%&= c \frac{\partial S}{\partial x}\frac{\partial t}{\partial \beta},\label{eq:S-beta}\\
+%\frac{\partial S}{\partial \alpha} = \frac{\partial S}{\partial t}\frac{\partial t}{\partial \alpha} +
+%\frac{\partial S}{\partial x}\frac{\partial x}{\partial \alpha}+
+%\frac{\partial S}{\partial y}\frac{dy}{dt}\frac{\partial t}{\partial \alpha} = \frac{D_- S}{\partial t}\frac{\partial t}{\partial \alpha} &= -c \frac{\partial S}{\partial x}\frac{\partial t}{\partial \alpha}.\label{eq:S-alpha}
+%\end{align}
+%\fi
+%接下来计算~\eqref{eq:S-beta} 式对~$\alpha$ 的偏导数，可得
+%\begin{equation}
+%\frac{\partial^2 S}{\partial \alpha \partial \beta} = \frac{\partial^2 t}{\partial \alpha \partial \beta}\left(c \frac{\partial S}{\partial x}\right) + \frac{\partial}{\partial \alpha}\left(c \frac{\partial S}{\partial x}\right)\frac{\partial t}{\partial \beta}.
+%\end{equation}
+%令~$\alpha$ 趋于~$0$，可将上式改写为
+%\begin{equation}
+%\frac{\partial}{\partial \beta}\left(\frac{\partial S}{\partial \alpha}(0,\beta)\right) = \left(c(0,\beta)\frac{\partial S}{\partial x}(0,\beta)\right)
+%\frac{\Theta(\beta)}{2c(0,\beta)} = -\frac{1}{2c(0,\beta)}\frac{\partial S}{\partial \alpha}(0,\beta).
+%\end{equation}
+%随后将上式从~$\beta_L$ 到~$\beta$ 积分可得
+%\begin{equation}
+%\frac{\partial S}{\partial \alpha}(0,\beta) = \frac{\partial S}{\partial \alpha}(0,\beta_L)
+%\exp\left(-\int_{\beta_L}^\beta \frac{1}{2c(0,\xi)}d\xi\right) = \frac{\partial S}{\partial \alpha}(0,\beta_L)\Pi(\beta;\beta_L)^{-1},
+%\end{equation}
+%再利用方程~\eqref{eq:S-alpha} 可得到最终的结果。
+%\end{proof}
+\vspace{2mm}
+\iffalse
+\begin{rem}
+In view of the Gibbs relation \eqref{eq:Gibbs}, the variation $T S_x$ should be taken as a whole.
+For polytropic gases, \eqref{eq:dSx} can be written as
+\begin{equation}\label{eq:dzetax}
+\frac{S_x(0,\beta,0)}{(S_x)_L} = \left(\frac{c(0,\beta,0)}{c_L}\right)^{\frac{1}{\mu_L^2}-1}.
+\end{equation}
+Across the rarefaction wave,
+\begin{equation}
+\frac{T(0,\beta,0)}{T_L} = \frac{e(0,\beta,0)}{e_L} = \frac{c(0,\beta,0)^2}{c_L^2},
+\end{equation}
+thus,
+\begin{equation}\label{eq:TdSx}
+\frac{T(0,\beta,0) S_x(0,\beta,0)}{T_L (S_x)_L} = \left(\frac{c(0,\beta,0)}{c_L}\right)^{\frac{1}{\mu_L^2}+1}.
+\end{equation}
+\end{rem}
+\vspace{2mm}
+\fi
+
+定理~\ref{lem:rarefaction} 总结了稀疏波的求解。随着~$\alpha\rightarrow 0$，沿着粒子轨迹，压力~$p$ 和速度~$u$ 的导数可以看作是依赖于~$\beta$ 的两个线性方程~\cite{ben2006direct}。
+\begin{theorem}\label{lem:rarefaction}
+当与特征值~$u-c$ 对应的左波是稀疏波的时候，对于所有的~$\beta\in [\beta_L,\beta_{*}]$，物质导数的极限值满足
+\begin{equation*}\label{eq:rare-abd}
+a_L\frac{D u}{D t}(0,\beta) + b_L\frac{D p}{D t}(0,\beta)=d_L,
+\end{equation*}
+这里
+\begin{equation*}
+(a_L,b_L)=\left(1,\frac{1}{\rho(0,\beta)c(0,\beta)}\right),
+\end{equation*}
+且
+\begin{equation*}\label{eq:d_L}
+\begin{aligned}
+d_L=&\frac{A(0,\beta)}{2}+\frac{1}{2}\frac{\Theta(\beta_L)}{\Theta(\beta)}(-2c_L\frac{\partial \psi_L}{\partial x}+c_LK(\rho_L,S_L)S'_L+G(x,t))\\
++&\frac{1}{2}\frac{\Theta(\beta_L)}{\Theta(\beta)}\int^{\beta}_{\beta_L}\frac{1}{2c(0,\xi)}\frac{\Theta(\beta)}{\Theta(\beta_L)}A(0,\xi)d\xi
++\frac{1}{2}G(x,t)
+\end{aligned}
+\end{equation*}
+其中~$A(0,\beta)$ 由~\eqref{eq:GRP-rare-A-2d} 给出。% and $(\psi_x)_L$ is given by \eqref{eq:Gibbs-polytropic} and \eqref{eq:dpsi-polytropic}.
+%关系式~\eqref{eq:rare-abd} 中的系数只依赖于初始的梯度~$(\bm{u}_x)_L$ 和相应的黎曼解~$\bm{u}_*$.
+\end{theorem}
+对于多方气体，有
+\begin{equation*}
+\begin{aligned}
+d_L=&\left[\frac{1+\mu^2}{1+2\mu^2}\left(\frac{c(0,\beta)}{c_L}\right)^{\frac{1}{2\mu^2}}+\frac{\mu^2}{1+2\mu^2}\left(\frac{c(0,\beta)}{c_L}\right)^{\frac{1+\mu^2}{\mu^2}}\right]T_LS'_L
+-c_L\left(\frac{c(0,\beta)}{c_L}\right)^{\frac{1}{2\mu^2}}\psi'_L\\
++&\frac{\gamma M}{2\rho c}\left[\left(\frac{c(0,\beta)}{c_L}\right)^{\frac{1}{2\mu^2}+1}+1\right].
+\end{aligned}
+\end{equation*}
+\begin{proof}
+由~\eqref{eq:D0S},~\eqref{eq:Dpsi-Dtau}式，可得
+\begin{equation}
+\frac{Du}{Dt}+\frac{1}{\rho c}\frac{Dp}{Dt}=\frac{D\psi}{Dt}=c K(\rho,S)\frac{\partial S}{\partial x}-c\frac{\partial\psi}{\partial x}.
+\end{equation}
+%通过引理~\ref{lem:dSx}，可得
+令
+\begin{equation}\label{eq:GRP-rare-A-2d}
+\begin{aligned}
+A(\alpha,\beta)&:=cK(\rho,S)\frac{\partial S}{\partial x}(\alpha,\beta).
+\end{aligned}
+\end{equation}
+%\begin{equation}\label{eq:GRP-rare-A-2d}
+%\begin{aligned}
+%A(0,\beta)&:=c(0,\beta)K(0,\beta)\frac{\partial S}{\partial x}(0,\beta)\\
+%&=c_LK(0,\beta)\Pi(\beta;\beta_L)^{-2} (S_x)_L.
+%\end{aligned}
+%\end{equation}
+%接下来计算~$\displaystyle c(0,\beta)\frac{\partial\psi}{\partial x}(0,\beta)$。
+%利用与~\eqref{eq:S-beta} 和~\eqref{eq:S-alpha} 一样的推导方法，
+可以将~\eqref{eq:Dpsi-Dtau} 变化为特征坐标~$(\alpha,\beta)$ 下的方程式
+\begin{equation}\label{eq:psi-beta}
+\frac{\partial \psi}{\partial \beta} =A(\alpha,\beta)\frac{\partial t}{\partial \beta}.
+\end{equation}
+%
+%\begin{equation}
+%\begin{aligned}\label{eq:psi-alpha}
+%\frac{\partial \psi}{\partial \alpha} = \left(A -c\frac{\partial v}{\partial y}-2c \frac{\partial \psi}{\partial x}+(v_L-v)\frac{\partial\psi}{\partial y}\right)\frac{\partial t}{\partial \alpha}.
+%\end{aligned}
+%\end{equation}
+\iffalse
+\begin{equation}\label{eq:psi-beta}
+\frac{\partial \psi}{\partial \beta} = \frac{\partial \psi}{\partial t}\frac{\partial t}{\partial \beta} +
+\frac{\partial \psi}{\partial x}\frac{\partial x}{\partial \beta} +
+\frac{\partial \psi}{\partial y}\frac{dy}{dt}\frac{\partial t}{\partial \beta} = \left(\frac{D_+ \psi}{D t}+(v_L-v)\frac{\partial\psi}{\partial y}\right)\frac{\partial t}{\partial \beta}=
+\left(A-c\frac{\partial v}{\partial y}+(v_L-v)\frac{\partial\psi}{\partial y}\right)\frac{\partial t}{\partial \beta},
+\end{equation}
+and
+\begin{equation}
+\begin{aligned}\label{eq:psi-alpha}
+\frac{\partial \psi}{\partial \alpha} &= \frac{\partial \psi}{\partial t}\frac{\partial t}{\partial \alpha} +
+\frac{\partial \psi}{\partial x}\frac{\partial x}{\partial \alpha} +
+\frac{\partial \psi}{\partial y}\frac{dy}{dt}\frac{\partial t}{\partial \alpha} = \left(\frac{D_+ \psi}{D t}-2c \frac{\partial \psi}{\partial x}\right)\frac{\partial t}{\partial \alpha}
+= \left(A -c\frac{\partial v}{\partial y}-2c \frac{\partial \psi}{\partial x}\right)\frac{\partial t}{\partial \alpha}.
+\end{aligned}
+\end{equation}
+\fi
+为了能够得到~$\displaystyle c\frac{\partial\psi}{\partial x}$ 的值，需要计算~$\displaystyle\frac{\partial\psi}{\partial \alpha}$。
+由~\eqref{eq:psi-beta} 对~$\alpha$ 求微分可得
+\begin{equation}\label{eq:ODE-psi-0}
+\frac{\partial^2 \psi}{\partial \alpha \partial \beta} = A(\alpha,\beta)\frac{\partial^2 t}{\partial \alpha \partial \beta} + \frac{\partial}{\partial \alpha}A(\alpha,\beta)\frac{\partial t}{\partial \beta}.
+\end{equation}
+令~$\alpha$ 趋于~$0$，由~\eqref{eq:tau-beta},~\eqref{eq:Theta-beta}式，可将方程~\eqref{eq:ODE-psi-0} 写作
+\begin{equation*}\label{eq:ODE-psi}
+\frac{\partial}{\partial \beta}\left(\frac{\partial \psi}{\partial \alpha}(0,\beta)\right) =
+\frac{A(0,\beta)\Theta(\beta)}{2c(0,\beta)}.
+\end{equation*}
+将上式从~$\beta_L$ 到~$\beta$ 求积分可得
+\begin{equation*}
+\frac{\partial \psi}{\partial \alpha}(0,\beta) = \frac{\partial \psi}{\partial \alpha}(0,\beta_L) + \frac{1}{2}\int_{\beta_L}^{\beta}\frac{A(0,\xi)}{c(0,\xi)}
+\Theta(\xi)d\xi.
+\end{equation*}\\
+(i) 计算初值 $\frac{\partial \psi}{\partial \alpha}(0,\beta_L)$.
+注意到
+\begin{equation*}
+\frac{\partial\psi}{\partial\alpha}=\frac{\partial t}{\partial \alpha}[\frac{\partial \psi }{\partial t}+(u-c)\frac{\partial \psi}{\partial x}],
+\end{equation*}
+将~(\ref{eq:dpsi}) 代入并令~$\beta=\beta_L$，有
+\begin{equation*}
+\frac{\partial\psi}{\partial\alpha}(0,\beta_L)=\Theta(\beta_L)[-2c_L\psi^{'}_L+c_LK(\rho_L,S_L)S^{'}_L+G(x,t)].
+\end{equation*}
+%\begin{equation}
+%\frac{\partial \psi}{\partial \alpha}(0,\beta_L)
+%= \left(A(0,\beta_L) -c_L (v_y)_L -2c(\psi_x)_L\right)\Theta(\beta_L).
+%\end{equation}
+%Therefore,
+(ii) 返回到~$(x,t)$ 坐标中.
+\begin{equation*}\label{eq:GRP-rare-Psi_x-2d}
+\begin{aligned}
+ &2c\frac{\partial\psi}{\partial x}(0,\beta)\\[3mm]
+=&cK(\rho,S)\frac{\partial S}{\partial x}(0,\beta)-\Theta^{-1}(\beta)\frac{\partial\psi}{\partial \alpha}+G(x,t)\\[3mm]
+=&cK(\rho,S)\frac{\partial S}{\partial x}(0,\beta)-\frac{\Theta(\beta_L)}{\Theta(\beta)}(-2c_L\frac{\partial \psi_L}{\partial x}+c_LK(\rho_L,S_L)S'_L+G(x,t))\\
+-&\frac{\Theta(\beta_L)}{\Theta(\beta)}\int^{\beta}_{\beta_L}\frac{1}{2c(0,\xi)}\frac{\Theta(\beta)}{\Theta(\beta_L)}A(0,\xi)d\xi
++G(x,t).
+\end{aligned}
+\end{equation*}
+可得
+\begin{equation*}\label{eq:dL_1}
+\begin{aligned}
+d_L(\beta) :=&\frac{D \psi}{D t}(0,\beta)
+= A(0,\beta)- c(0,\beta)\frac{\partial \psi}{\partial x}(0,\beta)+G(x,t)\\[2.5mm]
+=&\frac{A(0,\beta)}{2}+\frac{1}{2}\frac{\Theta(\beta_L)}{\Theta(\beta)}(-2c_L\frac{\partial \psi_L}{\partial x}+c_LK(\rho_L,S_L)S'_L+G(x,t))\\
++&\frac{1}{2}\frac{\Theta(\beta_L)}{\Theta(\beta)}\int^{\beta}_{\beta_L}\frac{1}{2c(0,\xi)}\frac{\Theta(\beta)}{\Theta(\beta_L)}A(0,\xi)d\xi
++\frac{1}{2}G(x,t).
+\end{aligned}
+\end{equation*}
+%并由~\eqref{eq:dSx} 可得
+%\begin{equation}\label{eq:dL}
+%\begin{aligned}
+%d_L(\beta)
+%=&\frac{A(0,\beta)}{2}+\frac{1}{2}\frac{\Theta(\beta_L)}{\Theta(\beta)}(-2c_L\frac{\partial \psi_L}{\partial x}+c_LK(\rho_L,S_L)S'_L+G(x,t))\\
+%+&\frac{1}{2}\frac{\Theta(\beta_L)}{\Theta(\beta)}\int^{\beta}_{\beta_L}\frac{1}{2c(0,\xi)}\frac{\Theta(\beta)}{\Theta(\beta_L)}A(0,\xi)d\xi
+%+\frac{1}{2}G(x,t).
+%\end{aligned}
+%\end{equation}
+%这里~$A(0,\beta)$ 由~\eqref{eq:GRP-rare-A-2d} 给出.
+\end{proof}
+\vspace{2mm}
+
+\BiSection{激波求解}{Resolution of the shock}
+
+在这一节中，考虑右激波的求解。
+令~$x=x(t)$ 是与特征值为~$u+c$ 相对应的激波，波速为~$\sigma=x'(t)$。$\overline{M}(t) = \overline{M}(x(t)+,y(t),t)$ 和~$M(t) = M(x(t)-,y(t),t)$ 表示任意变量~$M$ 在激波前和激波后的值。穿过激波面，关于~$u$-$p$ 的~Rankine-Hugonint 关系式为
+\begin{equation}\label{eq:RH-pu}
+u=\overline{u}+\Phi(p;\overline{p},\overline{\rho}).
+\end{equation}
+激波面的传播速度为
+\begin{equation}\label{eq:sigma}
+\sigma = \frac{dx}{dt} = \frac{\rho u - \overline{\rho}\overline{u}}{\rho - \overline{\rho}}.
+\end{equation}
+沿着激波~$x(t)$，Rankine-Hugonint 关系式~\eqref{eq:RH-pu} 的方向导数为，
+\begin{equation}\label{eq:RH-u-p}
+\left(\frac{\partial}{\partial t}+\sigma\frac{\partial}{\partial x}\right)(u-\overline{u}-\Phi(p;\overline{p},\overline{\rho}))=0.
+\end{equation}
+并且沿着激波，取~$t\rightarrow 0+$ 的极限可得
+\begin{equation*}
+(\rho,u,p)\rightarrow (\rho_{2*},u_*,p_*),\quad
+(\overline{\rho},\overline{u},\overline{p})\rightarrow (\rho_R,u_R,p_R),
+\end{equation*}
+和
+\begin{equation*}
+\frac{Du}{Dt}\rightarrow \left(\frac{Du}{Dt}\right)_{2*},\quad
+\frac{Dp}{Dt}\rightarrow \left(\frac{Dp}{Dt}\right)_{2*}.
+\end{equation*}
+ $(D u/D t)_{2*}$ 和~$(D p/D t)_{2*}$ 的极限值满足接下来的线性关系式。
+\begin{theorem}\label{lem:shock}
+当与特征值~$u+c$ 对应的右波是激波时，物质导数的极限满足
+\begin{equation*}\label{eq:a-b-d-R}
+a_R\left(\frac{D u}{D t}\right)_{2*} + b_R\left(\frac{D p}{D t}\right)_{2*} = d_R,
+\end{equation*}
+其中
+\begin{equation*}
+(a_R,b_R)=\left(1+\rho_{2*}(\sigma-u_*)\Phi_1,-\frac{\sigma-u_*}{\rho_{2*}c_{2*}^2}-\Phi_1\right),
+\end{equation*}
+\begin{equation*}
+d_R = L_p^R (p_x)_R + L_u^R (u_x)_R + L_\rho^R (\rho_x)_R + L_q^R,
+\end{equation*}
+和
+\begin{align*}
+&L_p^R = -\frac{1}{\rho_R} + (\sigma-u_R)\Phi_2,&&
+L_u^R = \sigma-u_R-\rho_R c_R^2 \Phi_2 - \rho_R\Phi_3,\\
+&L_\rho^R = (\sigma-u_R)\Phi_3, &&
+L_q^R = \Phi_2\frac{M}{\rho_R T_R}(\frac{\partial p}{\partial S})_R-\frac{(\sigma-u_*)M}{\rho^2_{2*}c^2_{2*}T_{2*}}(\frac{\partial p}{\partial S})_{2*}.
+\end{align*}
+这里， $\sigma$ 由公式~\eqref{eq:sigma} 给出，并且~$\Phi_l$, $l=1,2,3$ 满足
+\begin{equation*}
+\Phi_1 = \frac{\partial \Phi}{\partial p}(p_*;p_R,\rho_R),\quad
+\Phi_2 = \frac{\partial \Phi}{\partial \overline{p}}(p_*;p_R,\rho_R),\quad
+\Phi_3 = \frac{\partial \Phi}{\partial \overline{\rho}}(p_*;p_R,\rho_R).
+\end{equation*}
+\end{theorem}
+
+\begin{proof}
+通过计算可得以下两个关系式，
+\begin{equation}\label{eq:u}
+\begin{aligned}
+\frac{\partial u}{\partial t}+\sigma\frac{\partial u}{\partial x}
+=&\frac{Du}{Dt}+(\sigma-u)\frac{\partial u}{\partial x}\\
+=&\frac{Du}{Dt}+\frac{1}{\rho c^2}(\sigma-u)\frac{M}{\rho T}\frac{\partial p}{\partial S}-\frac{1}{\rho c^2}(\sigma-u)\frac{Dp}{Dt},
+\end{aligned}
+\end{equation}
+\begin{equation}\label{eq:p}
+\begin{aligned}
+\frac{\partial p}{\partial t}+\sigma\frac{\partial p}{\partial x}
+=\frac{Dp}{Dt}+(\sigma-u)\frac{\partial p}{\partial x}
+=\frac{Dp}{Dt}-\rho(\sigma-u)\frac{Du}{Dt}.
+\end{aligned}
+\end{equation}
+由方程~\eqref{eq:RH-u-p}，通过链式法则，可得
+\begin{equation}\label{eq:a-b-d-R-primitive}
+\begin{aligned}
+&\left(\frac{\partial u}{\partial t}+\sigma\frac{\partial u}{\partial x}\right)
+- \frac{\partial \Phi}{\partial p}\left(\frac{\partial p}{\partial t}+\sigma\frac{\partial p}{\partial x}\right) \\
+=&
+\left(\frac{\partial\overline{u}}{\partial t}+\sigma\frac{\partial \overline{u}}{\partial x}\right)
++ \frac{\partial \Phi}{\partial \overline{p}}\left(\frac{\partial \overline{p}}{\partial t}+\sigma\frac{\partial \overline{p}}{\partial x}\right)
++ \frac{\partial \Phi}{\partial \overline{\rho}}\left(\frac{\partial \overline{\rho}}{\partial t}+\sigma\frac{\partial \overline{\rho}}{\partial x}\right).
+\end{aligned}
+\end{equation}
+将~\eqref{eq:u} 和~\eqref{eq:p} 替换到~\eqref{eq:a-b-d-R-primitive} 的左端可得
+\begin{align*}
+&\left(\frac{\partial u}{\partial t}+\sigma\frac{\partial u}{\partial x}\right)
+- \frac{\partial \Phi}{\partial p}\left(\frac{\partial p}{\partial t}+\sigma\frac{\partial p}{\partial x}\right) \\
+=&\frac{D u}{D t}+(\sigma-u)\frac{\partial u}{\partial x}
+- \frac{\partial \Phi}{\partial p}\left[\frac{D p}{D t}+(\sigma-u)\frac{\partial p}{\partial x}\right]\\
+=&\frac{D u}{D t}+(\sigma-u)\left(-\frac{1}{\rho  c^2}\frac{D p}{D t} + \frac{1}{\rho  c^2}\frac{M}{\rho T}\frac{\partial p}{\partial S}\right)
+- \frac{\partial \Phi}{\partial p}\left[\frac{D p}{D t}-(\sigma-u)\rho\frac{D u}{D t}\right].
+%=&[1+\rho(\sigma-u)\Phi_1]\frac{D u}{D t}
+%-\left(\frac{\sigma-u}{\rho c^2}+\Phi_1\right)\frac{D p}{D t} - (\sigma-u)(v_y)_R.
+\end{align*}
+将~\eqref{eq:D0rhov}和~\eqref{eq:D0pu} 替换到~\eqref{eq:a-b-d-R-primitive} 的右端可得
+\begin{align*}
+&\left(\frac{\partial\overline{u}}{\partial t}+\sigma\frac{\partial \overline{u}}{\partial x}\right)
++ \frac{\partial \Phi}{\partial \overline{p}}\left(\frac{\partial \overline{p}}{\partial t}+\sigma\frac{\partial \overline{p}}{\partial x}\right)
++ \frac{\partial \Phi}{\partial \overline{\rho}}\left(\frac{\partial \overline{\rho}}{\partial t}+\sigma\frac{\partial \overline{\rho}}{\partial x}\right)\\
+=&\frac{D \overline{u}}{D t}+(\sigma-\overline{u})\frac{\partial \overline{u}}{\partial x}
++ \frac{\partial \Phi}{\partial \overline{p}}\left(\frac{D \overline{p}}{D t}+(\sigma-\overline{u})\frac{\partial \overline{p}}{\partial x}\right)
++ \frac{\partial \Phi}{\partial \overline{\rho}}\left(\frac{D \overline{\rho}}{D t}+(\sigma-\overline{u})\frac{\partial \overline{\rho}}{\partial x}\right)\\
+=&-\frac{1}{\overline{\rho}} \frac{\partial \overline{p}}{\partial x} +(\sigma-\overline{u})\frac{\partial \overline{u}}{\partial x}
++ \frac{\partial \Phi}{\partial \overline{p}}\left[-\overline{\rho}\overline{c}^2\left(\frac{\partial \overline{u}}{\partial x}+\frac{M}{\overline{\rho} \overline{T}}\frac{\partial \overline{p}}{\partial \overline{S}}\right)+(\sigma-\overline{u})\frac{\partial \overline{p}}{\partial x}\right]\\
+&+ \frac{\partial \Phi}{\partial \overline{\rho}}\left[-\overline{\rho}\left(\frac{\partial \overline{u}}{\partial x}\right)+(\sigma-\overline{u})\frac{\partial \overline{\rho}}{\partial x}\right].
+\end{align*}
+由上面两个方程并取~$t\rightarrow 0+$ 的极限可以证明该引理。
+\end{proof}
+\vspace{2mm}
+
+\begin{remark}
+对于多方气体，有
+\begin{align*}
+&\Phi(p;\overline{p},\overline{\rho}) = (p-\overline{p})\sqrt{\frac{1-\mu^2}{\overline{\rho}(p+\mu^2\overline{p})}},\\
+&\Phi_1=\frac{1}{2}\sqrt{\frac{1-\mu^2}{\rho_R(p_*+\mu^2 p_R)}}\frac{p_*+(1+2\mu^2)p_R}{p_*+\mu^2 p_R},\\
+&\Phi_2=-\frac{1}{2}\sqrt{\frac{1-\mu^2}{\rho_R(p_*+\mu^2 p_R)}}\frac{(2+\mu^2)p_*+\mu^2 p_R}{p_*+\mu^2 p_R},\\
+&\Phi_3=-\frac{p_*-p_R}{2 p_R}\sqrt{\frac{1-\mu^2}{\rho_R(p_*+\mu^2 p_R)}},\\
+&L_q^R=M(\gamma-1)\left[\Phi_2-(\sigma-u_*)\frac{1}{\rho_{2*}c_{2*}^2}\right],
+\end{align*}
+其中~$\mu^2=\frac{\gamma-1}{\gamma+1}$.
+\end{remark}
+
+\vspace{2mm}
+
+\BiSection{奇点处解的时间导数}{Temporal derivatives of the solution at the singularity}
+前面两个小节中的结果用于计算原点~$(x,t)=(0,0)$ 处解的时间导数。
+
+\begin{theorem}[Nonsonic case]\label{lem:Dup-Dt}
+假定~$t$-轴位于左波和右波中间，$\left({D} u/{D} t\right)_*$ 和~$\left({D} p/{D} t\right)_*$ 在中间区域的极限值可以通过求解下面的线性系统得到，
+\begin{equation}\label{eq:system}
+\begin{aligned}
+a_L\left(\frac{{D} u}{{D} t}\right)_* + b_L\left(\frac{{D} p}{{D} t}\right)_* &= {d}_L,~~~~~~~(rarefaction)\\
+a_R\left(\frac{{D} u}{{D} t}\right)_* + b_R\left(\frac{{D} p}{{D} t}\right)_* &= {d}_R,~~~~~~~(shock)
+\end{aligned}
+\end{equation}
+系数~$a_L,b_L,d_L,a_R,b_R$ 和~$d_R$ 可以由引理~\ref{lem:rarefaction} 得到。
+\end{theorem}
+\vspace{2mm}
+
+\begin{theorem}[Nonsonic case]\label{thm:temporal-pu-nonsonic}
+假定~$t$-轴位于左波和右波中间，$p$ 和~$u$ 的时间导数在中间区域的极限值有以下关系
+\begin{align*}
+\left(\frac{\partial u}{\partial t}\right)_* &= \left(\frac{{D} u}{{D} t}\right)_* + \frac{u_*}{\rho_{*} c_{*}^2}\left(\frac{D p}{D t}\right)_* + \frac{u_*M}{\rho_*^2c_*^2T_*} \left(\frac{\partial p}{\partial S}\right)_*,\\
+\left(\frac{\partial p}{\partial t}\right)_* &= \left(\frac{{D} p}{{D} t}\right)_* + \rho_{*} u_*\left(\frac{D u}{D t}\right)_*.
+\end{align*}
+\end{theorem}
+\begin{proof}
+由~\eqref{eq:D0pu} 和~\eqref{eq:D0rhov} 可得，
+\begin{align*}
+\frac{\partial u}{\partial t} &= \frac{{D} u}{{D} t} - u\frac{\partial u}{\partial x}
+=\frac{{D} u}{{D} t} - u\left(-\frac{1}{\rho c^2}\frac{D p}{D t}+\frac{M}{\rho^2c^2T} \left(\frac{\partial p}{\partial S}\right)\right)
+= \frac{{D} u}{{D} t} + \frac{u}{\rho c^2}\frac{D p}{D t} - \frac{uM}{\rho^2c^2T} \left(\frac{\partial p}{\partial S}\right),\\
+\frac{\partial p}{\partial t} &= \frac{{D} p}{{D} t} - u\frac{\partial p}{\partial x}
+=\frac{{D} p}{{D} t} - u \left(-\rho \frac{D u}{D t}\right)
+= \frac{{D} p}{{D} t} + \rho u \frac{D u}{D t}.
+\end{align*}
+通过估计上面两个方程在原点的值来得到最终的结果。
+\end{proof}
+\vspace{2mm}
+
+当~$t$-轴位于稀疏波内部时，属于声速情况。
+在这种情况下，$(\partial u/\partial t)_*$ 和~$(\partial p/\partial t)_*$ 的计算将会变得简单。
+\begin{theorem}[Sonic case]\label{thm:temporal-pu-sonic}
+假定~$t$-轴位于~$u-c$ 对应的左稀疏波内部。那么~$p$ 和~$u$ 的时间导数满足以下关系
+\begin{align*}
+\left(\frac{\partial u}{\partial t}\right)_* &= d_L (0)-\frac{M}{\rho^2_*c_*T_*}\left(\frac{\partial p}{\partial S}\right)_*, \\
+\left(\frac{\partial p}{\partial t}\right)_* &= \rho_* u_* d_L (0).
+\end{align*}
+\end{theorem}
+\vspace{2mm}
+
+下一步，计算密度的时间导数值，
+\begin{equation*}
+\left(\frac{\partial\rho}{\partial t}\right)_*=\lim\limits_{t\rightarrow 0+}\frac{\partial\rho}{\partial t}(0,t).
+\end{equation*}
+%can be calculated from the equation of state $p=p(\rho,S)$.
+因为穿过接触间断~$\rho$ 是间断的，所以~$(\partial\rho/\partial t)_*$ 依赖于接触间断的方向。
+$\rho$-$p$ 的~Rankine-Hugonint 关系满足
+\begin{equation*}
+\rho = H(p;\overline{p},\overline{\rho}).
+\end{equation*}
+沿着激波，求微分可得
+\begin{equation}\label{eq:RH-rho-p}
+\left(\frac{\partial}{\partial t}+\sigma\frac{\partial}{\partial x}\right)(\rho - H(p;\overline{p},\overline{\rho}))=0.
+\end{equation}
+可通过接下来的定理计算该结果。
+
+\begin{theorem}\label{thm:drho-dt}
+密度的时间导数~$\left(\partial \rho/\partial t\right)_*$ 计算依赖于~$u_*$ 的符号。
+\begin{itemize}
+\item[(1)] 如果 $u_* > 0$，可通过下面公式计算
+\begin{equation}\label{eq:drho-dt}
+\left(\frac{\partial \rho}{\partial t}\right)_* = \frac{1}{c_*^2}\left[\left(\frac{\partial p}{\partial t}\right)_* +\frac{M}{\rho_* T_*}(\frac{\partial p}{\partial S})_* +(\frac{\partial p}{\partial S})_*\frac{u_*}{c_*K(\rho_*S_*)}A(0,\beta_*)\right].
+\end{equation}
+\item[(2)] 如果 $u_* < 0$, 可通过以下方程求解
+\begin{equation*}\label{eq:drho-dt-shock}
+g_\rho^R\left(\frac{\partial \rho}{\partial t}\right)_*
++ g_p^R\left(\frac{D p}{D t}\right)_*
++ g_u^R \left(\frac{D u}{D t}\right)_*
+= f_R,
+\end{equation*}
+其中
+\begin{equation*}
+\begin{array}{l}
+\displaystyle g_\rho^R = u_*-\sigma,\quad
+g_p^R = \frac{\sigma}{c_{2*}^2}-u_* H_1,\quad
+g_u^R = u_* \rho_{2*} (\sigma-u_*)H_1,\\[2mm]
+\displaystyle f_R = u_*(\sigma-u_R) H_2 (p_x)_R + u_*(\sigma-u_R)H_3(\rho_x)_R - u_*\rho_R(c_R^2 H_2 + H_3)(u_x)_R+u_*H_2\frac{M}{\rho_R T_R}(\frac{\partial p}{\partial S})_R\\[2mm]
+\displaystyle \ \ \ \ \ \ \ +\frac{\sigma}{\rho_{2*} u_* T_{2*} c^2_{2*}}(\frac{\partial p}{\partial S})_{2*}.\\
+\end{array}
+\end{equation*}
+这里，$\sigma$ 是激波的初始速度，且~$H_i$，$i=1,2,3$，可以定义为
+\begin{equation*}
+H_1 = \frac{\partial H}{\partial p}(p_*;p_R,\rho_R),\quad
+H_2 = \frac{\partial H}{\partial \overline{p}}(p_*;p_R,\rho_R),\quad
+H_3 = \frac{\partial H}{\partial \overline{\rho}}(p_*;p_R,\rho_R).
+\end{equation*}
+\end{itemize}
+\end{theorem}
+
+\begin{proof}
+对于~$u_* > 0$ 情况, 由 \eqref{eq:D0S} 和~\eqref{eq:p-EOS}，可以计算得
+\begin{align*}
+\left(\frac{\partial \rho}{\partial t}+u\frac{\partial \rho}{\partial x}\right)_*= \frac{1}{{c_{1*}}^2}\left[\frac{\partial p}{\partial t}+u\frac{\partial p}{\partial x} - \frac{\partial p}{\partial S}\left(\frac{\partial S}{\partial t}+u\frac{\partial S}{\partial x}\right)\right]_*
+= \frac{1}{{c_{1*}}^2}\left(\frac{\partial p}{\partial t}+u\frac{\partial p}{\partial x} + u\frac{\partial p}{\partial S}\frac{\partial S}{\partial x}\right)_*.
+\end{align*}
+并且~$(\partial S/\partial x)_*$ 可由~\eqref{eq:dSx} 给出，\eqref{eq:drho-dt} 的结论即可证明。\\
+
+当~$u_* < 0$ 情况下，与定理~\ref{lem:shock} 的证明相同。对~\eqref{eq:RH-rho-p} 使用链式法则，并由控制方程~\eqref{eq:D0pu} 和~\eqref{eq:D0rhov} 可证。
+\iffalse
+with the same manner used to prove Lemma \ref{lem:shock}, use the chain rule to expand \eqref{eq:RH-rho-p} which leads to
+\begin{equation}
+\begin{aligned}\label{eq:RH-rho-p-directional-deri}
+&\left(\frac{\partial \rho}{\partial t}+\sigma\frac{\partial \rho}{\partial x} + v\frac{\partial \rho}{\partial y}\right) - \frac{\partial H}{\partial p}\left(\frac{\partial p}{\partial t}+\sigma\frac{\partial p}{\partial x}+v\frac{\partial p}{\partial y}\right)\\
+=& \frac{\partial H}{\partial \overline{p}}\left(\frac{\partial \overline{p}}{\partial t}+\sigma\frac{\partial \overline{p}}{\partial x}+v\frac{\partial \overline{p}}{\partial y}\right)
++ \frac{\partial H}{\partial \overline{\rho}}\left(\frac{\partial \overline{\rho}}{\partial t}+\sigma\frac{\partial \overline{\rho}}{\partial x}+v\frac{\partial \overline{\rho}}{\partial y}\right).
+\end{aligned}
+\end{equation}
+Substituting \eqref{eq:D0pu} into  the left hand side of \eqref{eq:RH-rho-p-directional-deri},
+\begin{align*}
+&u\left[\left(\frac{\partial \rho}{\partial t}+\sigma\frac{\partial \rho}{\partial x} + v\frac{\partial \rho}{\partial y}\right)
+- \frac{\partial H}{\partial p}\left(\frac{\partial p}{\partial t}+\sigma\frac{\partial p}{\partial x}+v\frac{\partial p}{\partial y}\right)\right] \\
+=&(u-\sigma)\left(\frac{\partial \rho}{\partial t}+ v\frac{\partial \rho}{\partial y}\right)+\sigma\frac{D \rho}{D t} -u \frac{\partial H}{\partial p} \left[\frac{D p}{D t}+(\sigma-u)\frac{\partial p}{\partial x}\right]\\
+=&(u-\sigma)\left(\frac{\partial \rho}{\partial t}+ v\frac{\partial \rho}{\partial y}\right)+\frac{\sigma}{c^2}\left(\frac{D p}{D t}-\frac{\partial p}{\partial S}\frac{D S}{D t}\right)
+- u\frac{\partial H}{\partial p}\left[\frac{D p}{D t}-(\sigma-u)\rho\frac{D u}{D t}\right]\\
+=&(u-\sigma)\left(\frac{\partial \rho}{\partial t}+ v\frac{\partial \rho}{\partial y}\right)+\left(\frac{\sigma}{c^2}
+- u \frac{\partial H}{\partial p}\right)\frac{D p}{D t}-u \rho(\sigma-u)\frac{\partial H}{\partial p}\frac{D u}{D t}.
+\end{align*}
+Substituting \eqref{eq:D0pu} and \eqref{eq:D0rhov} into  the right hand side of \eqref{eq:RH-rho-p-directional-deri},
+\begin{align*}
+&\frac{\partial H}{\partial \overline{p}}\left(\frac{\partial \overline{p}}{\partial t}+\sigma\frac{\partial \overline{p}}{\partial x}+v\frac{\partial \overline{p}}{\partial y}\right)
++ \frac{\partial H}{\partial \overline{\rho}}\left(\frac{\partial \overline{\rho}}{\partial t}+\sigma\frac{\partial \overline{\rho}}{\partial x}+v\frac{\partial \overline{\rho}}{\partial y}\right)\\
+=&\frac{\partial H}{\partial \overline{p}}\left[\frac{D \overline{p}}{D t}+(\sigma-\overline{u})\frac{\partial \overline{p}}{\partial x}\right]
++ \frac{\partial H}{\partial \overline{\rho}}\left[\frac{D \overline{\rho}}{D t}+(\sigma-\overline{u})\frac{\partial \overline{\rho}}{\partial x}\right]\\
+=&\frac{\partial H}{\partial \overline{p}}\left[-\overline{\rho}\overline{c}^2\left(\frac{\partial \overline{u}}{\partial x}+\frac{\partial \overline{v}}{\partial y}\right)+(\sigma-\overline{u})\frac{\partial \overline{p}}{\partial x}\right]
++ \frac{\partial H}{\partial \overline{\rho}}\left[-\overline{\rho} \left(\frac{\partial \overline{u}}{\partial x}+\frac{\partial \overline{v}}{\partial y}\right)+(\sigma-\overline{u})\frac{\partial \overline{\rho}}{\partial x}\right].
+\end{align*}
+The final result \eqref{eq:drho-dt-shock} is obtained by combining the above two equations and taking the limit $t\rightarrow 0+$.
+\fi
+\end{proof}
+\vspace{2mm}
+
+\begin{remark}
+对于多方气体，若~$u_* > 0$,
+\eqref{eq:drho-dt} 可写作
+\begin{equation*}\label{eq:drho-dt-gamma}
+\left(\frac{\partial \rho}{\partial t}\right)_* = \frac{1}{c_*^2}\left[\left(\frac{\partial p}{\partial t}\right)_* +(\gamma-1)M+(\gamma-1)\rho_* u_*\left(\frac{c_*}{c_L}\right)^{\frac{1}{\mu^2}+1}T_L(S_x)_L\right].
+\end{equation*}
+\iffalse
+\begin{equation}
+g_\rho^L\left(\frac{\partial \rho}{\partial t}\right)_*
++ g_p^L\left(\frac{\partial p}{\partial t}\right)_*
++ g_u^L \left(\frac{\partial u}{\partial t}\right)_*
+= f_L,
+\end{equation}
+where
+\begin{equation}
+(g_\rho^L,g_p^L,g_u^L) = (c_*^2,-1,0),
+\end{equation}
+\begin{equation}
+f_L = (\gamma_L-1)\rho_* u_*\left(\frac{c_*}{c_L}\right)^{\frac{1}{\mu_L^2}+1}T_L (S_x)_L + v_L p_y(0,0) - c_*^2 v_L \rho_y (0,0).
+\end{equation}
+\fi
+%If $u_* < 0$, the specific form of $H$ and $H_i$, $i=1,2,3$, are given as
+%\begin{equation}
+%H(p;\overline{p},\overline{\rho}) = \overline{\rho}\frac{p+\mu_R^2\overline{p}}{\overline{p}+\mu_R^2 p},\quad
+%H_1 = \frac{\rho_R(1-\mu_R^4)p_R}{(p_R+\mu_R^2 p_*)^2},\quad
+%H_2 = \frac{\rho_R(\mu_R^4-1)p_*}{(p_R+\mu_R^2 p_*)^2},\quad
+%H_3 = \frac{p_*+\mu_R^2 p_R}{p_R+\mu_R^2 p_*}.
+%\end{equation}
+%Here $\mu_L^2=\frac{\gamma_L-1}{\gamma_L+1}$, $\mu_R^2=\frac{\gamma_R-1}{\gamma_R+1}$ and $\gamma_L,\gamma_R$ are the specific heat ratios on the left and right sides of the initial discontinuity, respectively.
+\end{remark}
+\vspace{2mm}
+
+\BiSection{声速情况}{Acoustic case}
+若在原点处，流体左右状态非常接近，即满足~$\Vert \bm{u}_L-\bm{u}_R\Vert\ll1$，从原点处将产生声速波。
+在这种情况下，线性系统~\eqref{eq:system} 的系数将会被简化。
+\begin{theorem}[Acoustic case]\label{thm:acoustic}
+如果~$\bm{u}_L\approx\bm{u}_*\approx\bm{u}_R$,
+\begin{equation*}\label{eq:coeff-acoustic_up}
+\begin{array}{lll}
+\displaystyle \frac{\partial u}{\partial t}=-\frac{1}{2}\left[(u_*+c_*)(u^{'}_L+\frac{p^{'}}{\rho_*c_*})+(u_*-c_*)(u^{'}_R-\frac{p^{'}_R}{\rho_*c_*})\right],\\
+\displaystyle \frac{\partial p}{\partial t}=-\frac{\rho_* c_*}{2}\left[\left(u_*+c_*\right)\left(u^{'}_L+\frac{p^{'}_L}{\rho_*c_*}\right)-\left(u_*-c_*\right)\left(u^{'}_R-\frac{p^{'}_R}{\rho_*c_*}\right)\right]+\frac{M}{\rho_*T_*}\left(\frac{\partial p}{\partial S}\right)_*.
+\end{array}
+\end{equation*}
+那么~$(\frac{\partial \rho}{\partial t})_*$ 可以由状态方程~$p=p(\rho,S)$ 计算得到，
+\begin{equation*}\label{eq:coeff-acoustic_rho}
+(\frac{\partial\rho}{\partial t})_*=\left\{
+\begin{aligned}
+\frac{1}{c^2_*}\left[(\frac{\partial p}{\partial t})_*+u_*(p^{'}_L-c^2_*\rho^{'}_L)-\frac{M}{\rho_*T_*}(\frac{\partial p}{\partial S})_*\right], if~u_*=u_L=u_R>0,\\
+\frac{1}{c^2_*}\left[(\frac{\partial p}{\partial t})_*+u_*(p^{'}_R-c^2_*\rho^{'}_R)-\frac{M}{\rho_*T_*}(\frac{\partial p}{\partial S})_*\right], if~u_*=u_L=u_R<0.\\
+\end{aligned}
+\right.
+\end{equation*}
+\end{theorem}
+\begin{proof}
+首先，考虑向左的声速波。分别用~$\bm{u}_-$ 和~$\bm{u}_1$ 表示~$u-c$ 对应的声速波左、右两边的状态。
+因为，穿过声速波，解是连续的，沿着波面对~$u$ 取微分可得
+        \begin{equation*}
+        \frac{\partial u_-}{\partial t}+(u_--c_-)\frac{\partial u_-}{\partial x}= \frac{\partial u_1}{\partial t}+(u_1-c_1)\frac{\partial u_1}{\partial x}.
+        \end{equation*}
+利用方程~\eqref{eq:D0pu} 可以将上式写作，
+        \begin{equation*}
+        \frac{D u_-}{Dt}-c_-\frac{\partial u_-}{\partial x}=\frac{D u_1}{Dt}+c_1\left(\frac{1}{\rho_1 {c_1}^2}\frac{D p_1}{Dt}-\frac{1}{\rho_1 {c_1}^2}\frac{M}{\rho T}\frac{\partial p}{\partial S}\right).
+        \end{equation*}
+ 取极限~$t\rightarrow 0$ 可得，
+        \begin{equation}\label{acoustic_left}
+        -\frac{1}{\rho_*}(p_x)_L-c_*(u_x)_L=\left(\frac{{D} u}{{D} t}\right)_* + \frac{u_*-c_*}{\rho_*c_*^2}\left[\left(-\frac{Dp}{Dt}\right)_*+\left(\frac{M}{\rho T}\frac{\partial p}{\partial S}\right)_*\right].
+        \end{equation}
+ 对于~$u+c$ 对应的右声速波，采用相同的步骤可得，
+        \begin{equation}\label{acoustic_right}
+        -\frac{1}{\rho_*}(p_x)_R+c_*(u_x)_R=\left(\frac{{D} u}{{D} t}\right)_*+ \frac{u_*+c_*}{\rho_*c_*^2}\left[\left(-\frac{Dp}{Dt}\right)_*+\left(\frac{M}{\rho T}\frac{\partial p}{\partial S}\right)_*\right].
+        \end{equation}
+由方程~\eqref{acoustic_left} 和~\eqref{acoustic_right} 可得
+        \begin{equation*}\label{acoustic_DPDt}
+        \frac{2}{\rho_*c_*^2}\left[\left(\frac{Dp}{Dt}\right)_*-\frac{M}{\rho_* T_*}\left(\frac{\partial p}{\partial S}\right)_*\right]=-\frac{1}{\rho_*}(p_x)_L-c_*(u_x)_L+\frac{1}{\rho_*}(p_x)_R-c_*(u_x)_R,
+        \end{equation*}
+和
+        \begin{equation*}\label{acoustic_partial_u}
+        \frac{\partial u}{\partial t}=-\frac{1}{2}\left[\left(u_*+c_*\right)(u^{'}_L+\frac{p^{'}_L}{\rho_*c_*})+(u_*-c_*)(u^{'}_R-\frac{p^{'}_R}{\rho_*c_*})\right].
+        \end{equation*}
+注意到有方程
+        \begin{equation*}\label{acoustic_partial_Du}
+        \left(\frac{Du}{Dt}\right)_*=\left(\frac{\partial u}{\partial t}\right)_*+\frac{u_*}{\rho_*c^2_*}\left(-(\frac{Dp}{Dt})_*+\frac{M}{\rho_* T_*}(\frac{\partial p}{\partial S})_*\right),
+        \end{equation*}
+        \begin{equation*}\label{acoustic_partial_Dp}
+        \begin{aligned}
+        \left(\frac{\partial p}{\partial t}\right)_*=&\left(\frac{D p}{D t}\right)_*-u_*\left(\frac{\partial p}{\partial t}\right)_*
+        =\left(\frac{D p}{D t}\right)_*+\rho_*u_*\left(\frac{Du}{Dt}\right)_*\\
+        =&-\frac{\rho_* c_*}{2}\left[\left(u_*+c_*\right)\left(u^{'}_L+\frac{p^{'}_L}{\rho_*c_*}\right)-\left(u_*-c_*\right)\left(u^{'}_R-\frac{p^{'}_R}{\rho_*c_*}\right)\right]+\frac{M}{\rho_*T_*}\left(\frac{\partial p}{\partial S}\right)_*.
+        \end{aligned}
+        \end{equation*}
+那么，可得
+        \begin{equation*}\label{acoustic_partial_p}
+        \begin{aligned}
+        \left(\frac{\partial p}{\partial t}\right)_*=&\left(\frac{\partial p}{\partial \rho}\frac{\partial\rho}{\partial t}\right)_*+\left(\frac{\partial p }{\partial S}\right)_*\left(\frac{\partial S}{\partial t}\right)_*\\
+        =&c^2_*\left(\frac{\partial \rho}{\partial t}\right)_*-u_*\left(p^{'}_L-c^2_*\rho^{'}_L\right)+\left(\frac{M}{\rho_* T_*}\frac{\partial p }{\partial S}(\rho_*,S_*)\right).
+        \end{aligned}
+        \end{equation*}
+因此有，
+        \begin{equation*}\label{eq:acoustic_partial_rho}
+        (\frac{\partial\rho}{\partial t})_*=\left\{
+        \begin{aligned}
+        \frac{1}{c^2_*}\left[(\frac{\partial p}{\partial t})_*+u_*(p^{'}_L-c^2_*\rho^{'}_L)-\frac{M}{\rho_*T_*}(\frac{\partial p}{\partial S})_*\right], if~u_*=u_L=u_R>0,\\
+        \frac{1}{c^2_*}\left[(\frac{\partial p}{\partial t})_*+u_*(p^{'}_R-c^2_*\rho^{'}_R)-\frac{M}{\rho_*T_*}(\frac{\partial p}{\partial S})_*\right], if~u_*=u_L=u_R<0.\\
+        \end{aligned}
+        \right.
+        \end{equation*}
+        %\begin{equation}\label{acoustic_partial_rho}
+%        \left(\frac{\rho}{\partial t}\right)_*=\left\{
+%        \begin{aligned}
+%        %\frac{1}{c^2_*}\left[\left(\frac{\partial p}{\partial t}\right)_*\right]
+%        \end{aligned}
+%        \end{equation}
+%The temporal derivative of $\rho$ is obtained by the EOS $p=p(\rho,S)$ while the temporal derivatives of $v$, $\zeta$ and $z$ are obtained by using the third equation in \eqref{eq:D0rhov} and \eqref{eq:D0zetaz}.
+\end{proof}
+
+\BiSection{二维模型}{Numerical experiments}
+假设二维流体力学模型为
+\begin{equation}\label{eq:govern-2d}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho+\nabla\cdot(\rho {V})=0,\vspace{1ex}\\
+ \partial_t(\rho V)+\nabla\cdot(\rho {V}\otimes V+p)=0,\vspace{1ex}\\
+ \partial_t(\rho E)+\nabla\cdot(( \rho E+p){V})=\partial_x(k(\rho,T)\partial_xT)+\partial_y(k(\rho,T)\partial_yT),
+\end{array}
+\right.
+\end{equation}
+这里~$V=(u,v)$、$\rho E=\frac{\rho (u^2+v^2)}{2}+\rho e$ 分别是速度和总能量。
+对系统~(\ref{eq:govern-2d}) 使用算子分裂方法~\cite{toro2013riemann} 和松弛方法可得
+\begin{equation}\label{eq:govern-2d_1}
+\left\{
+\begin{array}{lllll}
+ \partial_t\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t(\rho {u})+\partial_x(\rho {u}^2+p)=0,\vspace{1ex}\\
+ \partial_t(\rho {v})+\partial_x(\rho {u}v)=0,\vspace{1ex}\\
+ \partial_t(\rho E)+\partial_x(( \rho E+p){u})=\partial_xq_{1},\\
+ \partial_tq_{1}+\beta_1\partial_xq_{1}=\frac{k(\rho,T)\partial_xT-q_{1}}{\alpha_1},
+\end{array}
+\right.
+\end{equation}
+和
+\begin{equation}\label{eq:govern-2d_2}
+\left\{
+\begin{array}{llll}
+ \partial_t\rho+\partial_y(\rho {v})=0,\vspace{1ex}\\
+ \partial_t(\rho {u})+\partial_y(\rho {u}v)=0,\vspace{1ex}\\
+ \partial_t(\rho {v})+\partial_y(\rho {v}^2+p)=0,\vspace{1ex}\\
+ \partial_t(\rho E)+\partial_y(( \rho E+p){v})=\partial_yq_2,\\
+  \partial_tq_2+\beta_2\partial_yq_2=\frac{k(\rho,T)\partial_yT-q_2}{\alpha_2},
+\end{array}
+\right.
+\end{equation}
+其中~$\alpha_{1,2}$，$\beta_{1,2}$ 为参数。
+考虑~$x-$ 方向的子系统~(\ref{eq:govern-2d_1})，除了由前面的算法得到的变量~$\rho$、$u$、$p$，还需要求解速度分量~$v$。
+由文献~\cite{ben2006direct} 可得，变量~$v$ 满足关系式
+\begin{equation}
+\frac{\partial v}{\partial t}+u\frac{\partial v}{\partial x}=0,
+\end{equation}
+并满足下面定理。
+\begin{theorem}
+假定向左移动的波是稀疏波，向右移动的波是激波，$x=0$ 位于中间区域，有
+
+(1).当~$u_*>0$ 时，由左稀疏波可得~$(\frac{\partial v}{\partial t})_*$ 的值
+\begin{equation*}
+(\frac{\partial v}{\partial t})_*=-u_*\frac{\rho_*}{\rho_L}v'_L.
+\end{equation*}
+
+(2).当~$u_*<0$ 时，由右激波可得~$(\frac{\partial v}{\partial t})_*$ 的值
+\begin{equation*}
+(\frac{\partial v}{\partial t})_*=-\frac{u_*(\sigma_R-u_R)}{\sigma_R-u_*}v'_R.
+\end{equation*}
+\end{theorem}
+同理可得~$y-$ 方向子系统~(\ref{eq:govern-2d_2}) 的解。
+
+令~$\mathcal{L}_x(\Delta t)$ 和~$\mathcal{L}_y(\Delta t)$ 分别表示系统~(\ref{eq:govern-2d_1}) 和~(\ref{eq:govern-2d_2}) 在一个时间步上的一维算子。
+求解二维系统~(\ref{eq:govern-2d}) 的~Strang splitting 算法在一个时间步上可写作~\cite{ben2006direct}，
+\begin{equation*}
+\begin{array}{l}
+U^{n+1}=\mathcal{L}_x(\Delta \frac{t}{2})\mathcal{L}_y(\Delta t)\mathcal{L}_x(\Delta \frac{t}{2})U^n.
+\end{array}
+\end{equation*}
+由此可得二维系统~(\ref{eq:govern-2d}) 的解。
+
+\BiSection{数值实验}{Numerical experiments}
+除非特殊说明，CFL 数~$C_{cfl}$，比热参数~$\gamma$、限制器参数~$\theta$、参数~$\alpha_{*,1,2}$、$\beta_{*,1,2}$ 分别取~$0.9,~\frac{5}{3},~1.0,10^{-8},0$。
+非线性热扩散为~$\kappa=KT^3$，这里~$K=10^{-5}$ 是比例因子。
+
+$\textbf{例}~\mathbf{5.1}~$
+这是一个一维的激波管问题，涉及到两个向相反方向移动的稀疏波，并且膜片位于~$x=0.5$ 处。
+对于系统~(\ref{eq:radiation1})，给定其初始条件为
+\begin{equation*}
+(\rho,u,T)(x,0)=
+\left\{
+\begin{array}{ll}
+(1,-1,1),~~~x\leq0.5,\vspace{1ex}\\
+(1,1,1),~~~~~~x>0.5.\\
+\end{array}
+\right.
+\end{equation*}
+计算域为~$[0,1]$，并采用~$200$ 个均匀的网格。
+图~\ref{grp_exam1} 给出了使用~GRP 算法求解系统~(\ref{eq:radiation1}) 在~$t=0.2$ 时刻得到的数值解，参考解是~$1000$ 个网格点获得的解。
+图中分别展现了该系统的密度、速度、压力、内能的解。并且从图中可以看出，该解包含两个分别向左、向右的稀疏波，由于数值壁热的影响使得在计算出的密度中存在一个下冲~``bubble"。并且由图中看出，该算法对于稀疏波的求解表现优异。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath grp_exam1}
+\bicaption[grp_exam1]{}{在~$t=0.2$ 时刻，使用松弛方法在~200 个网格点得到的密度、速度、压力、和内能的解以及与参考解的对比。}{Fig.$\!$}{A shock-tube problem. The solution of density, velocity, pressure and radiation internal energy of our scheme with 200 mesh cells at t=0.2 against the reference solution.}\label{grp_exam1}\vspace{-1em}
+\end{figure}
+
+$\textbf{例}~\mathbf{5.2}~$
+在该算例中，对于系统~(\ref{eq:radiation1})，采用与上例相同的初始条件，
+\begin{equation*}
+(\rho,u,T)(x,0)=
+\left\{
+\begin{array}{ll}
+(1,-1,1),~~~x\leq0.5,\vspace{1ex}\\
+(1,1,1),~~~~~~x>0.5.\\
+\end{array}
+\right.
+\end{equation*}
+对于计算域~$[0,1]$，仍采用~$200$ 个均匀的网格。
+取不同的比例因子~$K$，展现扩散项对系统解的影响。图~\ref{grp_exam2} 中展现了对于~$K=10^{-3},10^{-4},10^{-5}$ 时，该~GRP 算法的数值结果。
+可以观察到，当~$K=10^{-3}$ 时，扩散项的效果变得非常的明显，这一结果也是符合物理意义的。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath grp_exam2}
+\bicaption[grp_exam2]{}{在~$t=0.2$ 时刻，使用松弛方法在~200 个网格点得到的密度、速度、压力、和内能的解以及与参考解的对比。}{Fig.$\!$}{A shock-tube problem. The solution of density, velocity, pressure and radiation internal energy of our scheme with 200 mesh cells at t=0.2 against the reference solution.}\label{two_rarefaction_wave_compare}\vspace{-1em}
+\end{figure}
+
+$\textbf{例}~\mathbf{5.3}~$
+该算例是涉及到一个左稀疏波、接触间断和一个右激波的一维激波管问题。
+对于系统~(\ref{eq:radiation1})，给定其初始条件为
+\begin{equation*}
+(\rho,u,T)(x,0)=
+\left\{
+\begin{array}{ll}
+(1,0,2.5),~~~x\leq50,\vspace{1ex}\\
+(1,1,2),~~~~~~x>50.\\
+\end{array}
+\right.
+\end{equation*}
+计算域为~$[0,100]$，并采用~$200$ 个均匀的网格，并且膜片位于~$x=50$ 处。图~\ref{grp_exam3} 给出了使用~GRP 算法求解系统~(\ref{eq:radiation1}) 在~$t=15$ 时刻得到的数值解，参考解是~$1000$ 个网格点获得的解。
+图中分别给出了系统的密度、速度、压力、内能的解。从图中，可以观察到该格式不仅在光滑区域表现很好，而且在间断处也是与参考解相容，拟合的很好。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath grp_exam3}
+\bicaption[grp_exam3]{}{在~$t=15$ 时刻，使用松弛方法在~200 个网格点得到的密度、速度、压力、和内能的解以及与参考解的对比。}{Fig.$\!$}{A shock-tube problem. The solution of density, velocity, pressure and radiation internal energy of our scheme with 200 mesh cells at t=0.2 against the reference solution.}\label{two_rarefaction_wave_compare}\vspace{-1em}
+\end{figure}
+
+$\textbf{例}~\mathbf{5.4}~$
+该算例描述了风和密度云的反应。在计算域~$\Omega=[0,2]\times[0,1]$，密度云的中心位于点~$(x_0,y_0)=(0.3,0.5)$，半径为~$r=0.15$。$\Omega$ 中的初始条件满足，
+\begin{equation*}
+(\rho,u,v,p)(x,y,0)=
+\left\{
+\begin{array}{ll}
+(25,0,0,1.5),~~~~~(x-x_0)^2+(y-y_0)^2\leq R^2,\\
+(1,0,0,0.06),~~~~~(x-x_0)^2+(y-y_0)^2> R^2.\\
+\end{array}
+\right.
+\end{equation*}
+左端边界引入风，且该风的状态为~$(\rho,u,v,p)(0,y,t)=(1,6(1-e^{-10t}),0,0.06)$。在时间~$t=0.6$ 时，$200\times100$ 的网格上系统~(\ref{eq:radiation1}) 的密度、温度解如图~\ref{fig_grp_rho_2d}、\ref{fig_grp_T_2d}。
+从图中可以看到，进入的波会在气泡中产生冲击，并产生折射冲击。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath grp_rho_2d}
+\bicaption[fig_grp_rho_2d]{}{在~$t=0.6$ 时刻，$200\times100$ 个均匀网格上密度的解}{Fig.$\!$}{The solutions of density at $t=0.6$ with $200\times100$ uniform cells and 30 equally contour lines.}\label{grp_rho_2d}\vspace{-1em}
+\end{figure}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath grp_T_2d}
+\bicaption[fig_grp_T_2d]{}{在~$t=0.6$ 时刻，$200\times100$ 个均匀网格上温度的解}{Fig.$\!$}{The solutions of temperature at $t=0.6$ with $200\times100$ uniform cells and 30 equally contour lines.}\label{grp_T_2d}\vspace{-1em}
+\end{figure}
+
+\BiSection{小结}{}
+本章给出了对流扩散方程组的松弛方法。
+通过黎曼不变量和~Rankine-Hugoniot 跳跃条件，估计出变量的时间导数值，并将~Euler 坐标下直接地~GRP 方法应用到对流扩散的问题中。数值实验展现了该算法的表现。接下来需要研究如何将该方法应用到辐射流体力学方程组中。
+
+
+
+
+
+
+
+
+
+
+
