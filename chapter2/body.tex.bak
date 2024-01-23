@@ -1,0 +1,596 @@
+% !Mode:: "TeX:UTF-8"
+
+\BiChapter{平衡扩散极限下一维辐射流体力学方程组的求解方法}{One dimensional radiation hydrodynamics model
+in the equilibrium-diffusion limit}
+本章将对平衡扩散极限下一维辐射流体力学方程组进行数值求解。首先介绍了平衡扩散极限下一维辐射流体力学模型和该模型的性质；其次给出了对于该模型的算法设计，为了能够克服辐射源项刚性带来的计算难点，将采用算子分裂的算法，将~MUSCL-Hancock 算法应用到辐射和流体耦合的双曲系统中，使用中心型有限体积格式求解该模型的扩散部分；最后通过数值实验展示该算法的表现。
+
+\BiSection{平衡扩散极限下一维辐射流体力学模型}{One dimensional radiation hydrodynamics model
+in the equilibrium-diffusion limit}
+假定一个忽略粘性和热传导的单介质，辐射光学厚是很小的，并且物质速度是非相对论的。那么可以将辐射流体力学方程组写成平衡扩散极限下的形式~\cite{lowrie2007radiative}，
+\begin{equation}\label{equilibrium_model}
+\left\{
+\begin{array}{lll}
+ \partial_t&\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t&(\rho {u})+\partial_x(\rho {u}^2+p^*)=0,\vspace{1ex}\\
+ \partial_t&(\rho E^*)+\partial_x(( \rho E^*+p^*){u})=\partial_x(\kappa(\rho,T)\partial_x T),
+\end{array}
+\right.
+\end{equation}
+上式中~$\rho$，$u$，$p^*$，$\rho E^*$，$T$ 分别表示密度，速度，总压力，总能量，温度。总压力~$p^*=p+\frac{1}{3}\mathcal{P}_0T^4$，这里~$p$，$\mathcal{P}_0$ 分别为物质压力，辐射系数。总能量~$\rho E^*=\rho e^*+\frac{1}{2}\rho u^2$，这里~$e^*=e+\frac{1}{\rho}\mathcal{P}_0T^4$ 是总的比内能，$e=C_vT$ 是比内能，$C_v$ 是等容比热。$\frac{1}{3}\mathcal{P}_0T^4$，$\mathcal{P}_0T^4$ 分别表示辐射压力和辐射能量。为了封闭辐射流体力学模型系统~(\ref{equilibrium_model})，需要引入状态方程，
+\begin{equation*}\label{EOS}
+p=p(\rho,e).
+\end{equation*}
+在这篇文章中，只考虑理想气体的状态方程，
+\begin{equation}\label{prefect_gas_EOS}
+\begin{array}{ll}
+\displaystyle p=(\gamma-1)\rho e,\vspace{1ex}\\
+\displaystyle e=\frac{T}{\gamma(\gamma-1)},
+\end{array}
+\end{equation}
+这里~$\gamma$ 是比热率。
+该状态方程满足热力学关系式，
+\begin{equation*}\label{gibbs}
+TdS=de-\frac{p}{\rho^2}d\rho,
+\end{equation*}
+其中~$T$ 表示温度，$S$ 表示熵。
+\BiSection{模型的数学性质}{The nature of the model}
+\BiSubsection{平衡扩散极限下辐射模型激波结构的概述}{Summary of the shock wave structure of the radiation model in the equilibrium diffusion limit}
+对于平衡扩散极限下的辐射流体力学模型，注意到系统~(\ref{equilibrium_model}) 的扩散项是关于流体温度~$T$ 的函数，因此该模型的流体温度一定是连续的。
+正如文献~\cite{lowrie2007radiative} 所说的，
+物质穿过一个平衡扩散辐射模型的激波结构，将依次经过以下区域：辐射前导~(radiation precursor) 和等温的流体激波~(只有当~$\rho_p<\rho_1$ 时等温的流体激波才会出现)。对于辐射前导区域，
+若~$\rho_p\equiv \rho_1$，穿过辐射激波所有的变量均是连续的；若~$\rho_p<\rho_1$，该模型将会出现等温的流体激波跳跃。
+对于等温的流体激波，该激波使得流体变量从~$(\rho,u)_p$ 转变为~$(\rho,u)_1$, 而对应的温度是相等的，即~$T_p=T_1$.
+%平衡扩散极限下的辐射流体力学模型激波结构可以忽略~Zel'dovich飞跃(见图~\ref{equilibrium_chaper2})，
+图~\ref{equilibrium_chaper2} 中展现了平衡扩散极限下辐射流体力学模型的激波结构~\cite{lowrie2007radiative}。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{\fpath fige}
+\bicaption[equilibrium_chaper2]{}{平衡扩散极限下辐射模型的激波结构的例子}{Fig.$\!$}\vspace{-1em}
+\end{figure}
+
+\BiSubsection{平衡扩散极限下辐射流体模型双曲系统的性质}{The nature of the hyperbolic system the radiation model in the equilibrium diffusion limit}
+将平衡扩散极限下的辐射流体模型~(\ref{equilibrium_model}) 分裂成一个守恒律的双曲部分和一个非线性的辐射热扩散部分：
+\begin{equation}\label{equilibrium_hyperbolic}
+\left\{
+\begin{array}{lll}
+ \partial_t&\rho+\partial_x(\rho {u})=0,\vspace{1ex}\\
+ \partial_t&(\rho {u})+\partial_x(\rho {u}^2+p^*)=0,\vspace{1ex}\\
+ \partial_t&(\rho E^*)+\partial_x((\rho E^* +p^*){u})=0,
+\end{array}
+\right.
+\end{equation}
+和
+\begin{equation}\label{equilibrium_heat_transfer}
+\left\{
+\begin{array}{lll}
+ \partial_t&\rho=0,\vspace{1ex}\\
+ \partial_t&(\rho {u})=0,\vspace{1ex}\\
+ \partial_t&(\rho E^*)=\partial_x(\kappa(\rho,T)\partial_x T).
+\end{array}
+\right.
+\end{equation}
+
+下面考虑该模型的双曲部分~(\ref{equilibrium_hyperbolic})，可以将该系统写成拟线性的形式
+\begin{equation}\label{equilibrium_hyperbolic_quasilinear}
+\mathbf{W}_t+\mathbf{A}(\mathbf{W})\mathbf{W}_x=0,
+\end{equation}
+其中
+\begin{equation*}\label{equilibrium_hyperbolic_A_W}
+\mathbf{A}(\mathbf{W})=
+\begin{pmatrix}
+ u & \rho & 0 \\
+ 0 & u    & \frac{1}{\rho}\\
+ 0 & \rho a_r^2 &u\\
+\end{pmatrix},\\
+\end{equation*}
+这里~$a_r$ 是声速， $\mathbf{W}=(\rho,u,p*)$。%注意到，当~$\mathcal{P}_0=0$ 时，该系统将会变成大家熟悉的~Euler 方程组。\\
+\\
+对于雅可比矩阵~$\mathbf{A}(\mathbf{W})$，计算可得其三个特征值为
+\begin{equation*}\label{equilibrium_eigenvalues}
+\lambda_1=u-a_r,~~~\lambda_2=u,~~~\lambda_3=u+a_r.
+\end{equation*}
+并且其对应的三个右特征向量为
+\begin{equation*}\label{equilibrium_eigenvectors1}
+\displaystyle
+\mathbf{R}_1=
+\begin{pmatrix}
+ 1\\
+ -\frac{a_r}{\rho}\\
+ a_r^2\\
+\end{pmatrix},~
+\mathbf{R}_2=
+\begin{pmatrix}
+ 1\\
+ 0\\
+ 0\\
+\end{pmatrix},~
+\mathbf{R}_3=
+\begin{pmatrix}
+ 1\\
+ \frac{a_r}{\rho}\\
+ a_r^2\\
+\end{pmatrix}.
+\end{equation*}
+%对于该辐射流体模型声速~$a_r$ 的求解方法有多种，这里介绍其中的两种求解方法，\\
+%方法1\cite{kuang2019second}:
+%\begin{equation}\label{equilibrium_sound_speed1}
+%a_r=\sqrt{(\frac{\partial p^*}{\partial \rho})_s}=\sqrt{\frac{p}{\rho}+\frac{\hat{\kappa}^2}{\rho e \tilde{\kappa}}},
+%\end{equation}
+%这里
+%\begin{equation*}
+%\hat{\kappa}:=p+\frac{4\mathcal{P}_0e^4}{3Cv^4},
+%\end{equation*}
+%\begin{equation*}
+%\tilde{\kappa}:=\rho+\frac{4\mathcal{P}_0e^4}{3Cv^4}.
+%\end{equation*}
+%方法2
+对于该辐射流体力学模型声速~$a_r$ 可通过下式计算得到 \cite{kuang2019second}，
+%\begin{equation}\label{equilibrium_sound_speed2}
+%a_r=\sqrt{a^2+4\zeta\frac{p}{\rho}\frac{\Theta(2-3\Theta)+4\zeta\Theta}{1+12\zeta\Theta}},
+%\end{equation}
+%这里 $a=\sqrt{\frac{\gamma p }{\rho}}$，$\zeta=\frac{\mathcal{P}_0T^4}{3p}$，$\Theta=\gamma-1$.
+%\begin{equation}\label{equilibrium_sound_speed2}
+%\displaystyle a_r=\sqrt{\frac{p^*+(\frac{de}{dT}+\frac{4\mathcal{P}_0T^3}{\rho})(\frac{\partial T}{\partial \tau})_{p^*}+\mathcal{P}_0 T^4}{(\frac{de}{dT}+\frac{4\mathcal{P}_0T^3}{\rho})(\frac{\partial T}{\partial p^*})_\tau}},
+%\end{equation}
+%其中
+%\begin{equation*}
+%\displaystyle
+%(\frac{\partial T}{\partial \tau})_p{^*}=\frac{(\gamma-1)\rho^2e}{(\gamma-1)\rho(\frac{de}{dT})+\frac{4}{3}\mathcal{P}_0T^3},
+%\end{equation*}
+%和
+%\begin{equation*}
+%\displaystyle (\frac{\partial T}{\partial p^*})_{\tau}=\frac{1}{(\gamma-1)\rho(\frac{de}{dT})+\frac{4}{3}\mathcal{P}_0T^3},
+%\end{equation*}
+%这里~$\tau=\frac{1}{\rho}$.\\
+\begin{equation}\label{equilibrium_sound_speed1}
+a_r=\sqrt{(\frac{\partial p^*}{\partial \rho})_s}=\sqrt{\frac{p}{\rho}+\frac{\hat{\kappa}^2}{\rho e \tilde{\kappa}}},
+\end{equation}
+这里
+\begin{equation*}
+\hat{\kappa}:=p+\frac{4\mathcal{P}_0e^4}{3Cv^4},
+\end{equation*}
+\begin{equation*}
+\tilde{\kappa}:=\rho+\frac{4\mathcal{P}_0e^4}{3Cv^4}.
+\end{equation*}
+在设计该模型的算法中，将频繁的使用到温度变量~$T$。为了能够得到温度变量~$T$ 的值，将会使用到总能量的关系式
+\begin{equation}\label{obtain_temperature1}
+E^*=C_vT+\frac{1}{2}u^2+\frac{1}{\rho}\mathcal{P}_0T^4.
+\end{equation}
+下面用守恒变量来表示温度~$T$，方程~(\ref{obtain_temperature1}) 可写作一元四次方程
+\begin{equation}\label{obtain_temperature2}
+T^4+\frac{C_v\rho}{\mathcal{P}_0}T+(\frac{1}{2}\frac{\rho u^2}{\mathcal{P}_0}-\frac{\rho E^*}{\mathcal{P}_0})=0.
+\end{equation}
+令~$a=\frac{\rho E^*-\frac{1}{2}\rho u^2}{\mathcal{P}_0}$，$b=-\frac{(C_v\rho)^2}{8\mathcal{P}_0^2}$，和~$y=[-\frac{b}{2}+\sqrt{\frac{b^2}{4}+\frac{a^3}{27}}]^{\frac{1}{3}}-[\frac{b}{2}+\sqrt{\frac{b^2}{4}+\frac{a^3}{27}}]^{\frac{1}{3}}$。 在一元四次方程~(\ref{obtain_temperature2}) 的四个根中，可得到其具有物理意义的根~\cite{2013Application} 为
+ \begin{equation}\label{equilibrium_temperature}
+T=\frac{1}{2}(-\sqrt{2y}+\sqrt{-2y+\frac{2\rho}{\mathcal{P}_0\sqrt{2y}}}).
+\end{equation}
+
+%\newtheorem{thm}{\bf 性质}[section]
+%\begin{thm}\label{thm1}
+%穿过激波, $\frac{S_r}{\rho}=\frac{T_r^3}{\rho}$ 是连续的。
+%\end{thm}
+%
+%\begin{proof}
+%设激波速度是 $\bar{s}$，方程组(\ref{equilibrium_hyperbolic})的跳跃条件是
+%\begin{equation}\label{equilibrium_hyperbolic_jump}
+%\begin{pmatrix}
+% \rho \hat{u}\\
+% \rho {\hat{u}}^2+p^*\\
+% (\rho \hat{E}^* +p^*){\hat{u}}\\
+%\end{pmatrix}_L
+%=
+%\begin{pmatrix}
+% \rho \hat{u}\\
+% \rho {\hat{u}}^2+p^*\\
+% (\rho \hat{E}^* +p^*){\hat{u}}\\
+%\end{pmatrix}_R.
+%\end{equation}
+%其中$\hat{u}=u-\bar{s}$，$\hat{E}=e+\frac{1}{2}\hat{u}^2+\frac{\mathcal{P}_0E_r}{\rho}$。
+%这里，下标 $L$ 和 $R$ 分别表示激波左右两边的状态。
+%由关系式$\rho_L\hat{u}_L=\rho_R\hat{u}_R$，可得
+%\begin{equation}\label{equilibrium_hyperbolic_RH}
+%\hat{u}_R=\frac{\hat{u}_L\rho_L}{\rho_R}.
+%\end{equation}
+%将上式替换进关系式${S_r}_L \hat{u}_L={S_r}_R\hat{u}_R$，
+%我们有
+%\begin{equation}\label{equilibrium_hyperbolic_T3}
+%\frac{{T_r}^3_L}{\rho_L}=\frac{{T_r}^3_R}{\rho_R}.
+%\end{equation}
+%所以可得
+%\begin{equation}\label{equilibrium_hyperbolic_T3}
+%\frac{{S_r}_L}{\rho_L}=\frac{{S_r}_R}{\rho_R}.
+%\end{equation}
+%所以可证，穿过激波, $\frac{S_r}{\rho}=\frac{T_r^3}{\rho}$ 是连续的。
+%\end{proof}
+\BiSection{算法设计}{Algorithm design}
+在辐射流体力学模型的计算中，为了能够克服辐射源项的刚性带来的计算难点，本章将采用算子分裂的算法。将辐射流体模型分解为一个守恒律的双曲部分和一个非线性的热传导部分。对于辐射流体模型的双曲部分，将采用~MUSCL-Hancock 算法。由于辐射场中光子运动的时间尺度和物质运动的时间尺度相差很大，将采用隐式有限体积格式求解辐射热传导部分。
+
+首先，介绍~MUSCL-Hancock 算法应用到该平衡扩散极限下辐射流体模型的双曲系统~(\ref{equilibrium_hyperbolic})。 然后使用中心型有限体积方法求解该模型的扩散部分~(\ref{equilibrium_heat_transfer})。
+
+\BiSubsection{求解平衡扩散极限下辐射流体模型双曲系统的~MUSCL-Hancock方法}{MUSCL-Hancock method for solving hyperbolic system of radiation fluid model in equilibrium diffusion limit}
+现在，将~MUSCL-Hancock 方法应用到该模型的双曲系统中。将给定的区域~$[0,x_{\max}]$ 划分为均匀的网格~$\{x_j=j\Delta x, ~j=0,1,2,3,\cdots\}$。
+第~$j$ 个网格则被定义为$I_{j}=[x_{j-\frac{1}{2}},x_{j+\frac{1}{2}}]$, 这里$x_{j+\frac{1}{2}}=\frac{(x_j+x_{j+1})}{2}$.
+对于双曲系统~(\ref{equilibrium_hyperbolic})，可以定义完全守恒的迎风格式
+\begin{equation}\label{equilibrium_conservation_scheme}
+\mathbf{U}^{n+1}_{j}=\mathbf{U}^n_{j}+\frac{\Delta t}{\Delta x}(F(\mathbf{U}^{n+\frac{1}{2}}_{j-\frac{1}{2}})-F(\mathbf{U}^{n+\frac{1}{2}}_{j+\frac{1}{2}})),
+\end{equation}
+其中~$U_{j+\frac{1}{2}}^{n+\frac{1}{2}}$ 是守恒变量~$U$ 在网格界面~$x=x_{j+\frac{1}{2}}$ 上~$[t_n,t_{n+1}]$ 时间段中点的值。
+对于系统~(\ref{equilibrium_hyperbolic})，守恒变量和通量分别为
+\begin{equation*}\label{equilibrium_hyperbolic_variable}
+U=
+\begin{pmatrix}
+ \rho\\
+ \rho{u}\\
+ \rho{E^*}\\
+\end{pmatrix}
+,
+~~~
+F(U)=
+\begin{pmatrix}
+ \rho {u}\\
+ \rho {{u}}^2+p^*\\
+ (\rho {E}^* +p^*){{u}}\\
+\end{pmatrix}.
+\end{equation*}
+时间步长~$\Delta t$ 定义为
+\begin{equation*}\label{equilibrium_hyperbolic_timestep}
+\Delta t =\frac{C_{cfl}\Delta x}{S^n_{max}},
+\end{equation*}
+其中~$C_{cfl}$ 是~CFL 数，$S^n_{\max}:=\max\{|u^n_j|+{a_r}^n_j\}$ 在时刻~$t^n$ 区域内最大的波速。
+对于边界，这里采用穿透边界条件，
+\begin{equation}\label{equilibrium_hyperbolic_boundary_conditions}
+\left\{
+\begin{array}{ll}
+\mathbf{W}^n_0=\mathbf{W}^n_1,~~~~~~~~\mathbf{W}^n_{-1}=\mathbf{W}^n_2;\\
+\mathbf{W}^n_{M+1}=\mathbf{W}^n_M,~~~\mathbf{W}^n_{M+2}=\mathbf{W}^n_{M-1}.\\
+\end{array}
+\right.
+\end{equation}
+
+为了能够估计通量函数~$F(\mathbf{U}^{n+\frac{1}{2}}_{j+\frac{1}{2}})$，将~HLLC 近似黎曼解法器应用到该模型~(\ref{equilibrium_hyperbolic}) 中。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{\fpath fig1}
+\bicaption[HLLC_structure]{}{系统~(\ref{equilibrium_hyperbolic}) 的~HLLC 近似黎曼解的结构}{Fig.$\!$}{The structure of the HLLC approximate solution for the system (\ref{equilibrium_hyperbolic})}\vspace{-1em}
+\end{figure}
+系统~(\ref{equilibrium_hyperbolic}) 的~HLLC 近似解的结构如图~\ref{HLLC_structure}.
+
+%and the corresponding right eigenvectors are
+%\begin{equation}\label{3.4}
+%\mathbf{R}_1=
+%\begin{pmatrix}
+% 1\\
+% -\frac{a_r}{\rho}\\
+% a_r^2\\
+% \frac{S_r}{\rho}\\
+%\end{pmatrix},
+%~~~
+%\mathbf{R}_2=
+%\begin{pmatrix}
+% 1\\
+% 0\\
+% 0\\
+% 0\\
+%\end{pmatrix},
+%~~~
+%~~~
+%\mathbf{R}_3=
+%\begin{pmatrix}
+% 0\\
+% 0\\
+% 0\\
+% 1\\
+%\end{pmatrix},
+%~~~
+%\mathbf{R}_4=
+%\begin{pmatrix}
+% 1\\
+% \frac{a_r}{\rho}\\
+% a_r^2\\
+% \frac{S_r}{\rho}\\
+%\end{pmatrix}.\\
+%\end{equation}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%At the same time, we can get the following properties,
+%
+%\newtheorem{thm}{\bf Lemma}[section]
+%\begin{thm}\label{thm1}
+%Across the shock, $\frac{S_r}{\rho}=\frac{T_r^3}{\rho}$ is continuous.
+%\end{thm}
+%
+%\begin{proof}
+%If the speed of shock wave is $\bar{s}$, the jump conditions for the equations (\ref{2.6a})-(\ref{2.6d}) are
+%\begin{equation}\label{3.5}
+%\begin{pmatrix}
+% \rho \hat{u}\\
+% \rho {\hat{u}}^2+p^*\\
+% (\rho \hat{E}^* +p^*){\hat{u}}\\
+% {S_r}\hat{u}\\
+%\end{pmatrix}_L
+%=
+%\begin{pmatrix}
+% \rho \hat{u}\\
+% \rho {\hat{u}}^2+p^*\\
+% (\rho \hat{E}^* +p^*){\hat{u}}\\
+% {S_r}\hat{u}\\
+%\end{pmatrix}_R.
+%\end{equation}
+%where $\hat{u}=u-\bar{s}$, $\hat{E}=e+\frac{1}{2}\hat{u}^2+\frac{\mathcal{P}_0E_r}{\rho}$. Here, the subscripts L and R denote the left and the right state across the shock wave.
+%Using $\rho_L\hat{u}_L=\rho_R\hat{u}_R$, gives
+%\begin{equation}\label{3.6}
+%\hat{u}_R=\frac{\hat{u}_L\rho_L}{\rho_R}.
+%\end{equation}
+%Substitute the equation of (\ref{3.6}) into ${S_r}_L \hat{u}_L={S_r}_R\hat{u}_R$, we have
+%\begin{equation}\label{3.7}
+%\frac{{T_r}^3_L}{\rho_L}=\frac{{T_r}^3_R}{\rho_R}.
+%\end{equation}
+%
+%The proof is completed.
+%\end{proof}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+与文献~\cite{toro2013riemann} 中求解~Euler 方程组的~HLLC 数值通量解法器类似，可以得到系统~(\ref{equilibrium_hyperbolic}) 对应的~HLLC 通量。
+两波的中间状态可以由
+\begin{equation}\label{equilibrium_hyperbolic_intermediate_state}
+{U_*}_K=\rho_K\left(\frac{S_K-u_K}{S_K-S_*}\right)
+\begin{pmatrix}
+ 1\\
+ S_*\\
+ \frac{E_K}{\rho_K}+(S_K-u_K)\left[S_*+\frac{p_K}{\rho_K*(S_K-u_K)}\right]\\
+\end{pmatrix}
+\end{equation}
+给定，这里~$K=L,R$。
+与此同时，可以通过
+\begin{equation*}\label{equilibrium_hyperbolic_intermediate_fluxes}
+{F_*}_K=F_K+S_K({U_*}_K-U_K),
+\end{equation*}
+给出中间状态的通量，
+其中~$S_L$, $S_R$ 和~$S_*$ 分别是最慢、最快和中间的波速。
+并且可以通过~Roe 平均特征值得到~$S_L$, $S_R$，并且
+\begin{equation*}\label{3.3.11}
+S_*=\frac{p_R^*-p_L^*+\rho_L u_L (S_L-u_L)-\rho_R u_R (S_R-u_R)}{\rho_L(S_L-u_L)-\rho_R(S_R-u_R)}.
+\end{equation*}
+
+对于双曲系统~(\ref{equilibrium_hyperbolic}) 的~MUSCL-Hancock 方法可通过以下步骤实现：
+
+\textbf{第一步}：给定分片初值，$\mathbf{U}_j(x)$ 在网格~$I_j$ 端点的值为
+     \begin{equation}\label{equilibrium_hyperbolic_u+}
+     \mathbf{U}^{n,+}_{j-\frac{1}{2}}=\mathbf{U}^n_j-\frac{\triangle x}{2}\Delta_j,
+     \end{equation}
+     \begin{equation}\label{equilibrium_hyperbolic_u-}
+     \mathbf{U}^{n,-}_{j+\frac{1}{2}}=\mathbf{U}^n_j+\frac{\triangle x}{2}\Delta_j,
+     \end{equation}
+     斜率~$\Delta_j$ 可通过下面的~minmod 限制器算法得到,
+ \begin{equation*}\label{equilibrium_hyperbolic_minmod}
+\Delta_j=minmod(\theta\frac{\mathbf{U}^{n}_j-\mathbf{U}^{n}_{j-1}}{\triangle x},\frac{\mathbf{U}^{n}_{j+1}-\mathbf{U}^{n}_{j-1}}{2\triangle x},\theta\frac{\mathbf{U}^{n}_{j+1}-\mathbf{U}^{n}_{j}}{\triangle x}),
+\end{equation*}
+这里，参数~$\theta\in[1,2)$。且~midmod 非线性限制器的定义为，
+\begin{equation*}
+midmod(d_1,d_2,\cdots)=\left\{
+    \begin{array}{lll}
+\min_j\{d_j\},~~~\textbf{如果}~d_j>0~~\forall j,\vspace{1ex}\\
+\max_j\{d_j\},~~~\textbf{如果}~d_j<0~~\forall j,\vspace{1ex}\\
+0,~~~\textbf{其他}.\vspace{1ex}\\
+    \end{array}
+    \right.
+    \end{equation*}
+
+\textbf{第二步}： 通过以下公式
+\begin{equation}\label{equilibrium_hyperbolic_half_timestep1}
+{{\mathbf{U}}}^{n+\frac{1}{2},+}_{j-\frac{1}{2}}=\mathbf{U}^{n,+}_{j-\frac{1}{2}}+\frac{1}{2}\frac{\Delta t}{\Delta x}(F(\mathbf{U}^{n,+}_{j-\frac{1}{2}})-F(\mathbf{U}^{n,-}_{j+\frac{1}{2}})),
+\end{equation}
+\begin{equation}\label{equilibrium_hyperbolic_half_timestep2}
+{\mathbf{U}}^{n+\frac{1}{2},-}_{j+\frac{1}{2}}={\mathbf{U}}^{n,-}_{j+\frac{1}{2}}+\frac{1}{2}\frac{\Delta t}{\Delta x}(F(\mathbf{U}^{n,+}_{j-\frac{1}{2}})-F(\mathbf{U}^{n,-}_{j+\frac{1}{2}})),
+\end{equation}
+估计半个时间步~$\frac{\triangle t}{2}$ 上~$\mathbf{U}^{n+\frac{1}{2},+}_{j-\frac{1}{2}}$, $\mathbf{U}^{n+\frac{1}{2},-}_{j+\frac{1}{2}}$ 的值。
+
+\textbf{第三步}： 对于该系统~(\ref{equilibrium_hyperbolic}) 且初值为~${U}_L={{\mathbf{U}}}^{n+\frac{1}{2},-}_{j+\frac{1}{2}}$ 和 ~${U}_R={\mathbf{U}}^{n+\frac{1}{2},+}_{j+\frac{1}{2}}$ 的黎曼问题，可以通过上面介绍的~HLLC 近似通量解法器计算得到界面的通量。
+
+\textbf{第四步}： 通过~(\ref{equilibrium_conservation_scheme}) 式更新守恒变量的值，得
+\begin{equation}\label{equilibrium_hyperbolic_mid_value}
+    \mathbf{U}^{mid}=\left\{
+    \begin{array}{lll}
+    \rho^{n+1}_j\\
+    (\rho u)^{n+1}_j\\
+    E^{*mid}_j\\
+    \end{array}
+    \right\}.
+    \end{equation}
+注意到这里得到的守恒变量只是中间值，接下来需要经过计算系统~(\ref{equilibrium_model}) 的扩散部分~(\ref{equilibrium_heat_transfer}) 来更新总的能量密度，并跳转到~
+\textbf{第一步}。
+
+\BiSubsection{热传导方程的隐式中心型有限体积方法}{An implicit centered finite volume scheme for the heat transfer}
+在这一节中，首先介绍了求解辐射扩散系统~(\ref{equilibrium_heat_transfer}) 的隐式中心型有限体积格式。然后，展现利用~Newton-BiCGSTAB 算法求解该格式中关于~$T_j$ 的非线性函数。
+\BiSubsubsection{热传导方程的隐式中心型有限体积格式}{The implicit centered finite volume scheme for heat transfer in the equilibrium diffusion system}
+平衡扩散极限下辐射流体力学模型的扩散部分为
+\begin{equation}\label{equilibrium_heat_transfer2}
+\left\{
+\begin{array}{lll}
+ \partial_t&\rho=0,\vspace{1ex}\\
+ \partial_t&(\rho {u})=0,\vspace{1ex}\\
+ \partial_t&(\rho E^*)=\partial_x(\kappa(\rho,T)\partial_x T).
+\end{array}
+\right.
+\end{equation}
+对上式进行简化，可以得到关于温度变量~$T$ 的函数,
+\begin{equation}\label{equilibrium_heat_transfer_T}
+(E_T)_t=\partial_x(\kappa(\rho,T)\partial_x T),
+\end{equation}
+这里~$E_T$ 表示总能量密度中依赖于温度的变量，
+\begin{equation}
+E_T=\rho e +\mathcal{P}_0T^4.
+\end{equation}
+因此，可以得到求解系统~(\ref{equilibrium_heat_transfer_T}) 的中心型有限体积方法
+\begin{equation}\label{equilibrium_heat_transfer_T_scheme}
+\frac{{E_T}_j^{n+1}-{E_T}_j^{n}}{\Delta t}-\frac{\kappa^n_{j+\frac{1}{2}}(T_{j+1}^{n+1}-T_j^{n+1})-\kappa^n_{j-\frac{1}{2}}(T_j^{n+1}-T_{j-1}^{n+1})}{(\Delta x)^2}=0,
+\end{equation}
+这里~$\kappa^n_{j+\frac{1}{2}}=\frac{2}{\frac{1}{\kappa^n_j}+\frac{1}{\kappa^n_{j+1}}}$.
+
+\BiSubsubsection{Newton-BiCGSTAB 算法}{The Newton-BiCGSTAB algorithm}
+下面将系统~(\ref{equilibrium_heat_transfer_T_scheme}) 写成~$f(T_j)$ 函数。Newton 迭代方法可以用于寻找非线性函数~$\mathbf{f}(\mathbf{h})=0$ 的解，其中~$\mathbf{h}$ 是一个向量。
+对于该系统~(\ref{equilibrium_heat_transfer_T_scheme}), 我们有~$\mathbf{h}=\{T_{j}\}$, $\mathbf{f}(\mathbf{h})=\{f(T_j)\}$, 其中~$j=0,1,\ldots$。
+为了得到~$\mathbf{h}$ 值，将对下面非线性方程组使用~Newton 迭代方法求解，
+\begin{equation}
+\begin{array}{l}\label{New-BiCGSTAB_linear_equations}
+\mathbf{J}_k\delta\mathbf{h}_k=-\mathbf{f}(\mathbf{h}_k),
+\end{array}
+\end{equation}
+这里~$\mathbf{J}_k$ 是一个~Jacobian 矩阵，$\delta \mathbf{h}_k$ 是更新的向量， $k$ 是迭代指数。对于更新得到的向量~$\delta \mathbf{h}_k$，并由关系式
+\begin{equation*}
+\begin{array}{l}
+\mathbf{h}_{k+1}=\mathbf{h}_{k}+\delta \mathbf{h}_k,
+\end{array}
+\end{equation*}
+更新得到~$\mathbf{h}$ 值。一旦~$||\mathbf{f}(\mathbf{h}_k)||_2$ 的值小于收敛偏差，
+那么牛顿迭代将终止。这里，取收敛偏差为~$10^{-8}$.
+
+如果只使用~Newton 方法求解系统~(\ref{New-BiCGSTAB_linear_equations})，将会遇到~Jacobian 矩阵求逆的计算困难，为了克服该计算困难，我们将~Newton 迭代方法与一个~Krylov 解法器进行耦合~\cite{bates2001consistent}。本文采用一个特殊的~Krylov 方法---BiCGSTAB 算法~\cite{van1992bi}。在~BiCGSTAB 中，$\mathbf{r}_0$ 是一个初始的线性残差，在这里被定义为
+\begin{equation*}
+\begin{array}{l}
+\mathbf{r}_0=-\mathbf{f}(\mathbf{h}_k)-\mathbf{J}_k\delta \mathbf{h}_{k0}.
+\end{array}
+\end{equation*}
+当条件
+\begin{equation*}
+\begin{array}{l}\label{BiCGSTAB_equations}
+||\mathbf{J}_k\delta \mathbf{h}_k+\mathbf{f}(\mathbf{h}_k)||_2<10^{-3}||\mathbf{f}(\mathbf{h}_k)||_2
+\end{array}
+\end{equation*}
+满足时，线性~BiCGSTAB 迭代终止。
+一旦得到温度~$T^{n+1}_j$，系统~(\ref{equilibrium_model}) 的解就可以得到更新
+\begin{equation}\label{equilibrium_update_solution}
+\mathbf{U}^{mid}=\left\{
+ \begin{array}{lll}
+ \rho^{n+1}_j\\
+ (\rho u)^{n+1}_j\\
+ E^{*mid}_j\\
+ \end{array}
+\right\}
+\rightarrow
+\mathbf{U}^{n+1}=\left\{
+ \begin{array}{lll}
+ \rho^{n+1}_j\\
+ (\rho u)^{n+1}_j\\
+ E^{*{n+1}}_j\\
+ \end{array}
+\right\}.
+\end{equation}
+而在下一个时间步中，这些值将作为双曲系统~(\ref{equilibrium_hyperbolic}) 的初始值进行计算。
+
+\BiSection{数值实验}{Numerical experments}
+这一节中将通过几个初值问题来展示我们算法的表现。在所有的问题中，绝热指数~$\gamma$, CFL 数~$C_{cfl}$ 分别取~$\frac{5}{3}$, 0.5。图片中参考解为二阶的半离散中心型迎风格式~\cite{2013Application} 在~2000 个网格上得到解，IMEX 数值解是使用上文中显隐格式所得到的解。
+
+$\textbf{例}~\mathbf{2.1}~$
+如文献~\cite{2017Second}，采用后面附录~A 中给出的~``manufactured" 解来测试辐射流体力学方程组~(\ref{equilibrium_model}) 显隐格式的精度。
+这些解是由周期三角函数组成，
+%As in \cite{Bolding}, the method of manufactured solutions is used to test the accuracy of the implicit-explicit scheme for the radiation hydrodynamics. These solutions consist of trigonometric functions and periodic boundary conditions.
+\begin{equation*}
+\left\{
+\begin{array}{lll}
+\rho=(sin(x-t)+2),\\
+u=(cos(x-t)+2),\\
+p=0.5*(cos(x-t)+2),\\
+\end{array}
+\right.
+\end{equation*}
+计算域是~$2\pi$，并且辐射参数是~$\mathcal{P}_0=0.001$。表~\ref{table1} 给出了在~$t=0.2$ 时刻，密度的~$l^2$ 误差以及显隐格式所对应的收敛阶。
+%The computation domain is $2\pi$, and the radiation coefficient is $\mathcal{P}0=0.001$. Table 1 gives the $l^2$ errors in the density at $t=0.2$ and the corresponding convergence rates of the implicit-explicit scheme.
+
+\begin{table}[htbp]
+\bicaption[table1]{}{密度的~$l^2$ 误差}{Table$\!$}{The $l^2$ error in density.}
+\vspace{0.5em}\centering\wuhao
+\begin{tabular}{ccc}
+\toprule[1.5pt]
+N & $l^2$-error & $l^2$-order\\
+\midrule[1pt]        %画一条横线
+  20  & 0.0141 & 1.8862 \\
+  40  &0.0038 & 1.6538\\
+  80 &0.0012 & 1.5210\\
+  160 &0.0004 & 1.5446\\
+\bottomrule[1.5pt]
+\end{tabular}
+\end{table}
+
+$\textbf{例}~\mathbf{2.2}~$
+ 对于辐射流体力学模型~(\ref{equilibrium_model})，给定其初始条件为
+\begin{equation*}
+(\rho,u,T)(x,0)=
+\left\{
+\begin{array}{ll}
+(1,-1,1),~~~x\leq0.5,\\
+(1,1,1),~~~~~~x>0.5.\\
+\end{array}
+\right.
+\end{equation*}
+将定义域~$[0,1]$ 划分为~200 个网格，并且将非线性的热扩散函数~$\kappa$ 定义为~$\kappa(T)=K(1+10T^3)$，这里~$K$ 是一个缩放因子。
+该问题的解中包含一个向左移动的稀疏波、一个向右移动的稀疏波以及一个由于数值壁热造成的下冲~``bubble"。
+图~\ref{compare_acurate_1d} 展现了~$K=10^{-3}$ 的对比结果，可以看出在~$t=0.2$ 时刻，使用~IMEX 方法得到的数值解与参考解拟合的很好。
+图~\ref{DIFF_effect_1d} 展示了系统~(\ref{equilibrium_model}) 对于不同的缩放因子~$K=0,10^{-4},10^{-3},10^{-2}$ 使用~IMEX 格式得到的数值结果。
+可以观察到对于缩放因子~$K=10^{-2}$，该系统的扩散项带来的影响较为明显。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath compare_acurate_1}
+\bicaption[compare_acurate_1d]{}{在时间~t=0.2 时刻，系统~(\ref{equilibrium_model}) 在~200 个网格上的解。实线是参考解，是由二阶的半离散中心迎风格式~
+\cite{2013Application} 在~2000 个网格上得到}{Fig.$\!$}{A shock-tube problem. The solutions of system (\ref{equilibrium_model}) on 200 mesh cells at t=0.2. The solid lines are reference solutions, which are obtained by the semi-discrete second order central upwind scheme \cite{2013Application} at 2000 mesh points.}\vspace{-1em}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath DIFF_effect}
+\bicaption[DIFF_effect_1d]{}{在时间~t=0.2 时刻，系统~(\ref{equilibrium_model}) 在~200 个网格上，对于不同的缩放因子~$K$ 的解}{Fig.$\!$}{A shock-tube problem. The solutions of system (\ref{equilibrium_model}) for different scaling factor $K$ on 200 mesh cells at t=0.2.}\vspace{-1em}
+\end{figure}
+
+$\textbf{例}~\mathbf{2.3}~$
+给定系统~(\ref{equilibrium_model})的初始条件，
+\begin{equation*}
+(\rho,u,T)(x,0)=
+\left\{
+\begin{array}{ll}
+(1,50,0.5),~~~x\leq0.6,\\
+(2,-40,1),~~~x>0.6.\\
+\end{array}
+\right.
+\end{equation*}
+计算域为~$0\leqslant 0\leqslant 1$，并将其划分为200个网格。图~\ref{com_2} 展现了密度、速度、总压力、温度在~$t=0.04$ 时刻的数值解。
+该问题的解包含两个马赫数分别为~82 和~39 的激波和一个接触间断。
+从图中可以看出，在激波处该~IMEX的解与参考解拟合的很好。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath com_2}
+\bicaption[com_2]{}{在时间~t=0.04 时刻，系统~(\ref{equilibrium_model}) 在~200 个网格上的解。实线是参考解，是由二阶的半离散中心迎风格式~
+\cite{2013Application} 在~2000 个网格上得到}{Fig.$\!$}{A shock-tube problem. The solutions of system (\ref{equilibrium_model}) on 200 mesh cells at t=0.2. The solid lines are reference solutions, which are obtained by the semi-discrete second order central upwind scheme \cite{2013Application} at 2000 mesh points.}\vspace{-1em}
+\end{figure}
+
+$\textbf{例}~\mathbf{2.4}~$
+对于辐射流体力学模型~(\ref{equilibrium_model})，给定其初始条件为
+\begin{equation*}
+(\rho,u,T)(x,0)=
+\left\{
+\begin{array}{ll}
+(1,150,0.5),~~~x\leq0.5,\\
+(2,-100,1),~~~~x>0.5.\\
+\end{array}
+\right.
+\end{equation*}
+将定义域~$0\leqslant 0\leqslant 1$ 分为~200 个网格。该系统的解包含两个马赫数分别为~227.4 和~107.7 的强激波，和一个接触间断。点线是在~t=0.018 时刻，使用~IMEX 方法求解系统~(\ref{equilibrium_model}) 得到的数值解。实线是该系统的参考解。
+通过图~\ref{com_3_ps_1d}，可以看出对于强激波，该~IMEX 方法表现十分的优秀。而且，对于获取的接触间断，该~IMEX 数值方法也要优于该中心型的格式。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath com_3_ps}
+\bicaption[com_3_ps_1d]{}{在时间~t=0.018 时刻，系统~(\ref{equilibrium_model}) 在~200 个网格上的解。实线是参考解，是由二阶的半离散中心迎风格式~
+\cite{2013Application} 在~2000 个网格上得到}{Fig.$\!$}{A shock-tube problem. The solutions of system (\ref{equilibrium_model}) on 200 mesh cells at t=0.018. The solid lines are reference solutions, which are obtained by the semi-discrete second order central upwind scheme \cite{2013Application} at 2000 mesh points.}\vspace{-1em}
+\end{figure}
+
+\begin{comment}
+The Figure \ref{Fig13} show the numerical solutions of the implicit-explicit scheme for $K=0,10^{-4},10^{-3},10^{-2}$. One can observe that small changes in the diffusion term have little effect on solutions.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=10cm,height=8cm]{Diff_effect_shock.png}
+  \caption{A shock-tube problem. The solutions of system (\ref{2.9a}-\ref{2.9c}) for different scaling factor $K$ on 200 mesh cells at t=0.2.}\label{Fig13}
+\end{figure}
+\end{comment}
+
+\BiSection{小结}{}
+对于平衡扩散极限下的辐射流体力学方程组，为了克服其多时间尺度和刚性源项带来的困难，我们设计了显隐格式求解，得到了易于实施的二阶精度的算法。通过数值结果展现了该算法的表现。并且该数值方法可推广到更一般的状态方程中~(EOS)。下一章将进一步考虑辐射温度与物质温度不相等时的辐射模型。
