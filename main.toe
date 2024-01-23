@@ -1,0 +1,55 @@
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont \CJKfamily {song}Abstract (In Chinese)}{I}{section*.5}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont \CJKfamily {song}Abstract (In English)}{II}{section*.9}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont Chapter 1\hspace {0.5em} Introduction}{1}{section*.14}
+\contentsline {section}{\numberline {1.1}Research background}{1}{section*.16}
+\contentsline {section}{\numberline {1.2}Research status}{1}{section*.18}
+\contentsline {subsection}{\numberline {1.2.1}Euler equation}{1}{section*.20}
+\contentsline {subsection}{\numberline {1.2.2}Radiation hydrodynamical equations}{2}{section*.22}
+\contentsline {section}{\numberline {1.3}Derivation of the model}{4}{section*.24}
+\contentsline {subsection}{\numberline {1.3.1}Radiation hydrodynamical equations in the equilibrium diffusion limit}{7}{section*.26}
+\contentsline {subsection}{\numberline {1.3.2}Radiation hydrodynamical equations in the grey nonequilibrium diffusion limit}{8}{section*.28}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont Chapter 2\hspace {0.5em} One dimensional radiation hydrodynamics model in the equilibrium-diffusion limit}{10}{section*.31}
+\contentsline {section}{\numberline {2.1}One dimensional radiation hydrodynamics model in the equilibrium-diffusion limit}{10}{section*.33}
+\contentsline {section}{\numberline {2.2}The nature of the model}{10}{section*.35}
+\contentsline {subsection}{\numberline {2.2.1}Summary of the shock wave structure of the radiation model in the equilibrium diffusion limit}{10}{section*.37}
+\contentsline {subsection}{\numberline {2.2.2}The nature of the hyperbolic system the radiation model in the equilibrium diffusion limit}{11}{section*.40}
+\contentsline {section}{\numberline {2.3}Algorithm design}{13}{section*.43}
+\contentsline {subsection}{\numberline {2.3.1}MUSCL-Hancock method for solving hyperbolic system of radiation fluid model in equilibrium diffusion limit}{13}{section*.45}
+\contentsline {subsection}{\numberline {2.3.2}An implicit centered finite volume scheme for the heat transfer}{15}{section*.48}
+\contentsline {subsubsection}{\numberline {2.3.2.1}The heat transfer in the equilibrium diffusion system}{15}{section*.50}
+\contentsline {subsubsection}{\numberline {2.3.2.2}The Newton-BiCGSTAB algorithm}{16}{section*.52}
+\contentsline {subsection}{\numberline {2.3.3}Numerical experments}{17}{section*.54}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont Chapter 3\hspace {0.5em} One dimensional radiation hydrodynamics model in the grey nonequilibrium-diffusion limit}{24}{section*.63}
+\contentsline {section}{\numberline {3.1}One dimensional radiation hydrodynamics model in the grey nonequilibrium-diffusion limit}{24}{section*.65}
+\contentsline {section}{\numberline {3.2}The nature of the model}{25}{section*.67}
+\contentsline {subsection}{\numberline {3.2.1}Summary of the shock wave structure of the radiation model in the grey nonequilibrium diffusion limit}{25}{section*.69}
+\contentsline {subsection}{\numberline {3.2.2}The nature of the hyperbolic system the radiation model in the grey nonequilibrium diffusion limit}{27}{section*.73}
+\contentsline {section}{\numberline {3.3}Algorithm design}{28}{section*.75}
+\contentsline {subsection}{\numberline {3.3.1}MUSCL-Hancock method for solving hyperbolic system of radiation fluid model in grey nonequilibrium diffusion limit}{28}{section*.77}
+\contentsline {subsection}{\numberline {3.3.2}An implicit centered finite volume scheme for the heat transfer}{30}{section*.79}
+\contentsline {subsubsection}{\numberline {3.3.2.1}The heat transfer in the equilibrium diffusion system}{30}{section*.81}
+\contentsline {subsection}{\numberline {3.3.3}Numerical experments}{31}{section*.83}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont Chapter 4\hspace {0.5em} An IMEX method for $2-D$ radiation hydrodynamics}{37}{section*.94}
+\contentsline {section}{\numberline {4.1}Two-dimensional radiation hydrodynamical equations}{37}{section*.96}
+\contentsline {section}{\numberline {4.2}The convective part of the radiation hydrodynamics}{39}{section*.98}
+\contentsline {section}{\numberline {4.3}The heat transfer in the radiative diffusion system}{42}{section*.101}
+\contentsline {subsection}{\numberline {4.3.1}The alternative form of TR/BDF2 method}{42}{section*.103}
+\contentsline {subsection}{\numberline {4.3.2}The alternative form of TR/BDF2 method for the transfer of the radiative diffusion system}{43}{section*.105}
+\contentsline {subsection}{\numberline {4.3.3}Asymptotic analysis}{44}{section*.107}
+\contentsline {subsubsection}{\numberline {4.3.3.1}Continuum analysis}{44}{section*.109}
+\contentsline {subsubsection}{\numberline {4.3.3.2}Discrete analysis}{47}{section*.111}
+\contentsline {section}{\numberline {4.4}Numerical experiments}{49}{section*.113}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont Chapter 5\hspace {0.5em} Dissipation problem of convection-diffusion equation}{59}{section*.129}
+\contentsline {section}{\numberline {5.1}The convection-diffusion model}{59}{section*.131}
+\contentsline {section}{\numberline {5.2}Implementation of the GRP scheme}{60}{section*.133}
+\contentsline {section}{\numberline {5.3}Resolution of the centerd rarefaction wave}{60}{section*.135}
+\contentsline {section}{\numberline {5.4}Resolution of the shock}{65}{section*.143}
+\contentsline {section}{\numberline {5.5}Temporal derivatives of the solution at the singularity}{68}{section*.147}
+\contentsline {section}{\numberline {5.6}Acoustic case}{69}{section*.154}
+\contentsline {section}{\numberline {5.7}Numerical experiments}{71}{section*.157}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont Chapter 6\hspace {0.5em} Conclusions and Perspectives}{75}{section*.166}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont \CJKfamily {song}Acknowledgements}{76}{section*.170}
+\contentsline {chapter}{References}{77}{section*.172}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont Appendix A\hspace {0.25em plus 0.125em minus 0.08em}\ignorespaces \hspace {0.25em plus 0.125em minus 0.08em}\ignorespaces Full Appendix}{82}{section*.177}
+\contentsline {section}{\numberline {A.1}Section in Appendix}{82}{section*.179}
+\contentsline {chapter}{\fontsize {12pt}{12pt}\selectfont Appendix B\hspace {0.25em plus 0.125em minus 0.08em}\ignorespaces \hspace {0.25em plus 0.125em minus 0.08em}\ignorespaces Papers published in the period of PH.D. education}{83}{section*.184}

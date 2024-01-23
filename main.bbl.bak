@@ -1,0 +1,168 @@
+\begin{thebibliography}{27}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[LeVeque and Leveque(1992)]{leveque1992numerical}
+LeVeque R~J, Leveque R~J.
+\newblock Numerical methods for conservation laws[M].
+\newblock
+\newblock  Vol. 132.[S.l.]: Springer, 1992.
+
+\bibitem[Toro(2013)]{toro2013riemann}
+Toro E~F.
+\newblock
+\newblock Riemann solvers and numerical methods for fluid dynamics: a practical
+  introduction[M].[S.l.]: Springer Science \& Business Media, 2013.
+
+\bibitem[Roe(1981)]{roe1981approximate}
+Roe P~L.
+\newblock Approximate Riemann solvers, parameter vectors, and difference
+  schemes[J].
+\newblock Journal of computational physics, 1981, 43(2):357--372.
+
+\bibitem[Godunov(1959)]{godunov1959difference}
+Godunov S~K.
+\newblock A difference method for numerical calculation of discontinuous
+  solutions of the equations of hydrodynamics[J].
+\newblock Matematicheskii Sbornik, 1959, 89(3):271--306.
+
+\bibitem[Leer(1979)]{1979Towards}
+Leer B~V.
+\newblock Towards the ultimate conservative difference scheme. V. A
+  second-order sequel to Godunov's method[J].
+\newblock Journal of Computational Physics, 1979.
+
+\bibitem[Colella and Woodward(1984)]{colella1984piecewise}
+Colella P, Woodward P~R.
+\newblock The piecewise parabolic method (PPM) for gas-dynamical
+  simulations[J].
+\newblock Journal of computational physics, 1984, 54(1):174--201.
+
+\bibitem[Woodward(1986)]{woodward1986piecewise}
+Woodward P~R.
+\newblock
+\newblock
+\newblock Piecewise-parabolic methods for astrophysical fluid
+  dynamics[M]//Astrophysical Radiation Hydrodynamics.[S.l.]: Springer,
+  1986:245--326.
+
+\bibitem[Harten et al.(1987)]{harten1987uniformly}
+Harten A, Engquist B, Osher S, et al.
+\newblock
+\newblock
+\newblock Uniformly high order accurate essentially non-oscillatory schemes,
+  III[M]//Upwind and high-resolution schemes.[S.l.]: Springer, 1987:218--290.
+
+\bibitem[Liu et al.(1994)]{liu1994weighted}
+Liu X~D, Osher S, Chan T.
+\newblock Weighted essentially non-oscillatory schemes[J].
+\newblock Journal of computational physics, 1994, 115(1):200--212.
+
+\bibitem[Ben-Artzi and Falcovitz(1984)]{ben1984second}
+Ben-Artzi M, Falcovitz J.
+\newblock A second-order Godunov-type scheme for compressible fluid
+  dynamics[J].
+\newblock Journal of Computational Physics, 1984, 55(1):1--32.
+
+\bibitem[Ben-Artzi and Falcovitz(2003)]{ben2003generalized}
+Ben-Artzi M, Falcovitz J.
+\newblock Generalized Riemann problems in computational fluid dynamics[M].
+\newblock
+\newblock  Vol. 11.[S.l.]: Cambridge University Press, 2003.
+
+\bibitem[Ben-Artzi and Li(2007)]{ben2007hyperbolic}
+Ben-Artzi M, Li J.
+\newblock Hyperbolic balance laws: Riemann invariants and the generalized
+  Riemann problem[J].
+\newblock Numerische Mathematik, 2007, 106(3):369--425.
+
+\bibitem[Ben-Artzi et al.(2006){\natexlab{a}}]{ben2006direct}
+Ben-Artzi M, Li J, Warnecke G.
+\newblock A direct Eulerian GRP scheme for compressible fluid flows[J].
+\newblock Journal of Computational Physics, 2006, 218(1):19--43.
+
+\bibitem[Tang and Wu(2000)]{tang2000kinetic}
+Tang H~Z, Wu H~M.
+\newblock Kinetic flux vector splitting for radiation hydrodynamical
+  equations[J].
+\newblock Computers \& fluids, 2000, 29(8):917--933.
+
+\bibitem[Jiang and Sun(2007)]{jiang2007second}
+Jiang S, Sun W.
+\newblock A second-order BGK scheme for the equations of radiation
+  hydrodynamics[J].
+\newblock International journal for numerical methods in fluids, 2007,
+  53(3):391--416.
+
+\bibitem[Kuang and Tang(2019)]{kuang2019second}
+Kuang Y, Tang H.
+\newblock Second-order direct Eulerian GRP schemes for radiation hydrodynamical
+  equations[J].
+\newblock Computers \& Fluids, 2019, 179:163--177.
+
+\bibitem[Dai and Woodward(1998)]{dai1998numerical}
+Dai W, Woodward P~R.
+\newblock Numerical simulations for radiation hydrodynamics. I. Diffusion
+  limit[J].
+\newblock Journal of Computational Physics, 1998, 142(1):182--207.
+
+\bibitem[Qamar and Ashraf(2013)]{2013Application}
+Qamar S, Ashraf W.
+\newblock Application of central schemes for solving radiation hydrodynamical
+  models[J].
+\newblock Computer Physics Communications, 2013, 184(5):1349--1363.
+
+\bibitem[Bolding et al.(2017)]{2017Second}
+Bolding S, Hansel J, Edwards J~D, et al.
+\newblock Second-order discretization in space and time for
+  radiation-hydrodynamics[J].
+\newblock Journal of Computational Physics, 2017, 338:511--526.
+
+\bibitem[Larsen and Morel(1989)]{1989Asymptotic}
+Larsen E~W, Morel J~E.
+\newblock Asymptotic solutions of numerical transport problems in optically
+  thick, diffusive regimes II[J].
+\newblock 1989.
+
+\bibitem[Larsen et al.(1987)]{Edward1987Asymptotic}
+Larsen E~W, Morel J~E, Miller~Jr W~F.
+\newblock Asymptotic solutions of numerical transport problems in optically
+  thick, diffusive regimes[J].
+\newblock Journal of Computational Physics, 1987, 69(2):283--324.
+
+\bibitem[Knoll et al.(2007)]{2007Numerical}
+Knoll D~A, Lowrie R~B, Morel J~E.
+\newblock Numerical analysis of time integration errors for nonequilibrium
+  radiation diffusion[J].
+\newblock Journal of Computational Physics, 2007, 226(2):1332--1347.
+
+\bibitem[Densmore and Larsen(2004)]{2004Asymptotic}
+Densmore J~D, Larsen E~W.
+\newblock Asymptotic equilibrium diffusion analysis of time-dependent Monte
+  Carlo methods for grey radiative transfer[J].
+\newblock Journal of Computational Physics, 2004, 199(1):175--204.
+
+\bibitem[Fang(2021)]{2021Implicit-explicit}
+Fang Y.
+\newblock An implicit-explicit scheme for the radiation hydrodynamics[J].
+\newblock Advances in Applied Mathematics and Mechanics, 2021, 13(2):404--425.
+
+\bibitem[Lowrie and Edwards(2008)]{2008Radiative}
+Lowrie R~B, Edwards J~D.
+\newblock Radiative shock solutions with grey nonequilibrium diffusion[J].
+\newblock Shock Waves, 2008, 18(2):129--143.
+
+\bibitem[Ben-Artzi et al.(2006){\natexlab{b}}]{2006A}
+Ben-Artzi M, Li J, Warnecke G.
+\newblock A direct Eulerian GRP scheme for compressible fluid flows[J].
+\newblock Journal of Computational Physics, 2006, 218(1):19--43.
+
+\bibitem[Prendergast and Xu(1993)]{prendergast1993numerical}
+Prendergast K~H, Xu K.
+\newblock Numerical hydrodynamics from gas-kinetic theory[J].
+\newblock Journal of Computational Physics, 1993, 109(1):53--66.
+
+\end{thebibliography}
