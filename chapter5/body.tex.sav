@@ -1,0 +1,971 @@
+% !Mode:: "TeX:UTF-8"
+
+\BiChapter{求解二维辐射流体力学方程组的显隐格式}{An IMEX method for $2-D$ radiation hydrodynamics}
+本章将对二维辐射流体力学方程组(平衡扩散极限下辐射流体力学模型和非平衡扩散极限下的灰度辐射流体力学
+模型)进行数值求解。采用算子分裂的方法，将辐射模型分解为辐射和流体耦合的双曲系统和辐射扩散部分。使用~MUSCL-Hancock 算法应用到系统的双曲部分，同时利用~TR/BDF2 的变换形式求解该模型的扩散部分；随后给出了~TR/BDF2 的变换形式关于时间的渐近分析；最后通过数值实验展示了该格式的表现。
+\BiSection{二维的辐射流体力学模型}{Two-dimensional radiation hydrodynamical equations}
+假定单介质物质是辐射不透明的，非平衡扩散极限下二维灰度辐射流体力学模型~\cite{pomraning2005equations} 可以写作，
+\begin{equation}\label{nonequilibrium_2Dmodel}
+\left\{
+ \begin{array}{lllll}
+ \partial_t\rho+\partial_x(\rho u)+\partial_y(\rho v)=0,\vspace{1ex} \\
+ \partial_t(\rho u)+\partial_x(\rho u^2+p+\frac{1}{3}\mathcal{P}_0E_r)+\partial_y(\rho uv)=0,\vspace{1ex}\\
+ \partial_t(\rho v)+\partial_x(\rho uv)+\partial_y(\rho u^2+p+\frac{1}{3}\mathcal{P}_0E_r)=0,\vspace{1ex}\\
+ \partial_t(\rho E)+\partial_x(u(\rho E+p))+\partial_y(v(\rho E+p))=-\mathcal{P}_0\mathcal{S}_e,\vspace{1ex}\\
+ \partial_t E_r+\frac{4}{3}\partial_x(E_r u)+\frac{4}{3}\partial_y(E_r v)-\partial_x(\kappa(\rho,T)\partial_xE_r)-\partial_y(\kappa(\rho,T)\partial_yE_r)=\mathcal{S}_e,\\
+\end{array}
+\right.
+\end{equation}
+这里~$S_e$ 是辐射能量与物质能量的转换，
+\begin{equation}\label{nonequilibrium_2dS_e}
+\mathcal{S}_e=\sigma(T^4-E_r)+\frac{1}{3}u\partial_x{E_r}+\frac{1}{3}v\partial_y{E_r}.
+\end{equation}
+这里~$\rho E=\rho e+\frac{1}{2}\rho u^2+\frac{1}{2}\rho v^2$, $\mathcal{P}_0E_r=\mathcal{P}_0T_r^4$, $p=(\gamma-1)\rho e$, $e=C_v T$, $\rho$, $u$, $v$, $T$, $T_r$, $\sigma$ 和~$\mathcal{P}_0$ 分别是总的物质能量，辐射能量，物质压力，比内能，密度，$x$ 轴方向的速度，$y$ 轴方向的速度，物质温度，辐射温度，吸收横截面积和辐射系数。
+
+由系统~(\ref{nonequilibrium_2Dmodel}) 中第四、五个方程可以推得总能量守恒公式，
+\begin{align}\label{nonequilibrium_2d_totalenergy}
+\partial_t[\rho E+\mathcal{P}_0E_r]+\partial_x[u(\rho E+p+\frac{4}{3}\mathcal{P}_0E_r)]&+\partial_y[v(\rho E+p+\frac{4}{3}\mathcal{P}_0E_r)]\\\nonumber
+&=\mathcal{P}_0\partial_x(\kappa(\rho,T)\partial_x E_r)+\mathcal{P}_0\partial_y(\kappa(\rho,T)\partial_y E_r).
+\end{align}
+系统中第五个方程可以写作
+\begin{equation}\label{nonequilibrium_2d_entropy}
+\partial_t S_r +\partial_x(S_ru)+\partial_y(S_ru)=\frac{3}{4T_r}[\partial_x(\kappa(\rho,T)\partial_x E_r)+\partial_y(\kappa(\rho,T)\partial_y E_r)+\sigma(T^4-E_r)],
+\end{equation}
+这里~$S_r=T_r^3$ 是辐射熵。因此可以将系统~(\ref{nonequilibrium_2Dmodel}) 写作，
+\begin{equation}\label{nonequilibrium_re2Dmodel}
+\left\{
+ \begin{array}{lllll}
+ \partial_t\rho+\partial_x(\rho u)+\partial_y(\rho v)=0, \vspace{1ex}\\
+ \partial_t(\rho u)+\partial_x(\rho u^2+p^*)+\partial_y(\rho uv)=0,\vspace{1ex}\\
+ \partial_t(\rho v)+\partial_x(\rho uv)+\partial_y(\rho u^2+p^*)=0,\vspace{1ex}\\
+ \partial_t(\rho E^*)+\partial_x(u(\rho E^*+p^*))+\partial_y(v(\rho E^*+p^*))=\mathcal{P}_0\partial_x(\kappa(\rho,T)\partial_x E_r)+\mathcal{P}_0\partial_y(\kappa(\rho,T)\partial_y E_r),\vspace{1ex}\\
+\partial_t S_r +\partial_x(S_ru)+\partial_y(S_ru)=\frac{3}{4T_r}[\partial_x(\kappa(\rho,T)\partial_x E_r)+\partial_y(\kappa(\rho,T)\partial_y E_r)+\sigma(T^4-E_r)],\\
+\end{array}
+\right.
+\end{equation}
+这里，$E^*=E+\frac{1}{\rho}\mathcal{P}_0E_r$,$p^*=p+\frac{1}{3}\mathcal{P}_0E_r$。
+
+随着流体温度等于辐射温度，流体将变成平衡扩散极限下的状态。那么平衡扩散极限下的二维辐射流体力学可以写作~\cite{pomraning2005equations}，
+\begin{equation}\label{equilibrium_2Dmodel}
+\left\{
+ \begin{array}{llll}
+ \partial_t\rho+\partial_x(\rho u)+\partial_y(\rho v)=0, \vspace{1ex}\\
+ \partial_t(\rho u)+\partial_x(\rho u^2+p^*)+\partial_y(\rho uv)=0,\vspace{1ex}\\
+ \partial_t(\rho v)+\partial_x(\rho uv)+\partial_y(\rho u^2+p^*)=0,\vspace{1ex}\\
+ \partial_t(\rho E^*)+\partial_x(u(\rho E^*+p^*))+\partial_y(v(\rho E^*+p^*))=\partial_x(\kappa(\rho,T)\partial_x T)+\partial_y(\kappa(\rho,T)\partial_y T).\\
+\end{array}
+\right.
+\end{equation}
+对于非平衡扩散极限下的灰度辐射流体力学模型~(\ref{nonequilibrium_re2Dmodel})，可以将它分为双曲部分
+\begin{equation}\label{nonequilibrium_2d_convective}
+\left\{
+ \begin{array}{lllll}
+ \partial_t\rho+\partial_x(\rho u)+\partial_y(\rho v)=0, \vspace{1ex}\\
+ \partial_t(\rho u)+\partial_x(\rho u^2+p^*)+\partial_y(\rho uv)=0,\vspace{1ex}\\
+ \partial_t(\rho v)+\partial_x(\rho uv)+\partial_y(\rho u^2+p^*)=0,\vspace{1ex}\\
+ \partial_t(\rho E^*)+\partial_x(u(\rho E^*+p^*))+\partial_y(v(\rho E^*+p^*))=0,\vspace{1ex}\\
+\partial_t S_r +\partial_x(S_ru)+\partial_y(S_ru)=0,\\
+\end{array}
+\right.
+\end{equation}
+和扩散部分，
+\begin{equation}\label{nonequilibrium_2d_diffusive}
+\left\{
+ \begin{array}{lllll}
+ \partial_t\rho=0, \vspace{1ex}\\
+ \partial_t(\rho u)=0,\vspace{1ex}\\
+ \partial_t(\rho v)=0,\vspace{1ex}\\
+ \partial_t(\rho E)=-\mathcal{P}_0\sigma(T^4-E_r),\vspace{1ex}\\
+\partial_t E_r=\partial_x(\kappa(\rho,T)\partial_x E_r)+\partial_y(\kappa(\rho,T)\partial_y E_r)+\sigma(T^4-E_r).\\
+\end{array}
+\right.
+\end{equation}
+相似的，对于平衡扩散极限下的辐射流体力学模型，也可以分为双曲部分
+\begin{equation}\label{equilibrium_2d_convective}
+\left\{
+ \begin{array}{llll}
+ \partial_t\rho+\partial_x(\rho u)+\partial_y(\rho v)=0, \vspace{1ex}\\
+ \partial_t(\rho u)+\partial_x(\rho u^2+p^*)+\partial_y(\rho uv)=0,\vspace{1ex}\\
+ \partial_t(\rho v)+\partial_x(\rho uv)+\partial_y(\rho u^2+p^*)=0,\vspace{1ex}\\
+ \partial_t(\rho E^*)+\partial_x(u(\rho E^*+p^*))+\partial_y(v(\rho E^*+p^*))=0,\\
+\end{array}
+\right.
+\end{equation}
+和扩散部分
+\begin{equation}\label{equilibrium_2d_diffusive}
+\left\{
+ \begin{array}{llll}
+ \partial_t\rho=0, \vspace{1ex}\\
+ \partial_t(\rho u)=0,\vspace{1ex}\\
+ \partial_t(\rho v)=0,\vspace{1ex}\\
+ \partial_t(\rho E^*)=\partial_x(\kappa(\rho,T)\partial_x T)+\partial_y(\kappa(\rho,T)\partial_y T).\\
+\end{array}
+\right.
+\end{equation}
+
+系统~(\ref{nonequilibrium_2d_convective})-(\ref{equilibrium_2d_diffusive}) 是基于~Strang~splitting 方法~\cite{toro2013riemann}。接下来，将简要介绍该方法。考虑偏微分方程组的初值问题，
+\begin{equation}\label{2d_strang_splitting}
+\left\{
+ \begin{array}{ll}
+\partial_tU+\partial_xF(U)+\partial_yG(U)=S(U),\vspace{1ex}\\
+U(x,y,t^n)=U^n,
+\end{array}
+\right.
+\end{equation}
+这里，$0\leq x\leq L$, $0\leq y\leq L$, $U$ 是系统~(\ref{2d_strang_splitting}) 的解，$S(U)$ 和流体通量~$F(U)$, $G(U)$ 是变量~$U$ 的函数。若已知~$t=t^n$ 时刻的值$U^n$，估计~$t=t^{n+1}$ 时刻的值~$U^{n+1}$，那么可以采用~Strang~splitting 的方法求解系统~(\ref{2d_strang_splitting})。接下来，介绍使用~Strang~splitting 的方法求解系统~(\ref{2d_strang_splitting}) 步骤，
+
+\textbf{第一步}：中间状态~${U^*}$ 可以由~(\ref{2d_splitting1}) 得到。
+\begin{equation}\label{2d_splitting1}
+ \begin{array}{ll}
+\partial_tU+\partial_xF(U)+\partial_yG(U)=0.
+\end{array}
+\end{equation}
+
+\textbf{第二步}：将~${U^*}$ 作为初值求解
+\begin{equation}\label{2d_splitting2}
+ \begin{array}{ll}
+\partial_tU=S(U),
+\end{array}
+\end{equation}
+可以得到~$U^{n+1}$.\\
+%\begin{equation}\label{2.11.3}
+%\left.
+ %\begin{array}{ll}
+%\partial_tU=S(U),\\
+%U(x,y,t^n)=\overline{U}^{n+1},
+%\end{array}
+%\right\}\Longrightarrow U^{n+1}.
+%\end{equation}
+那么偏微分方程组的初值问题被分成了对流问题~(\ref{2d_splitting1}) 和源问题~(\ref{2d_splitting2})。
+假定~$S_1(\Delta t)$ 是对流问题~(\ref{2d_splitting1}) 在一个时间步长~$\Delta t$ 上的算子，$S_2(\Delta t)$ 是~ODE 问题~(\ref{2d_splitting2}) 在一个时间步长~$\Delta t$ 上的算子，
+\begin{equation}\label{2d_splitting_x1}
+ \begin{array}{ll}
+ {U}^*=S_1(\Delta t)(U^n),\vspace{1ex}\\
+U^{n+1}=S_2(\Delta t)({U}^*).
+\end{array}
+\end{equation}
+当~$S_1$ 和~$S_2$ 都至少是一阶精度的算子，那么该分裂格式至少是一阶时间精度。求解系统~(\ref{2d_strang_splitting}) 的二阶精度的方法是
+\begin{equation}\label{2d_splitting_2order}
+ \begin{array}{l}
+U^{n+1}=S_2(\frac{1}{2}\Delta t)S_1(\Delta t)S_2(\frac{1}{2}\Delta t)(U^n),
+\end{array}
+\end{equation}
+这里~$S_1$ 和~$S_2$ 都至少是二阶精度的算子。
+~Strang~splitting 格式最有吸引力的地方就是能够在不同的子问题上部署其最优的算法。
+
+\BiSection{辐射流体的对流部分}{The convective part of the radiation hydrodynamics}
+本节，将~MUSCL-Hancock 格式应用到二维双曲系统~(\ref{nonequilibrium_2d_convective}) 和~(\ref{equilibrium_2d_convective}) 中。
+使用~Cartesian 网格将给定的区域~$[0,x_{max}]\times[0,y_{max}]$ 进行离散。$\{x_i=i\Delta x,i=0,1,2\cdots, N_x\}$ 和~$\{y_j=j\Delta y,j=0,1,2\cdots, N_y\}$ 分别是等空间尺寸网格。单元网格被定义为~$I_{ij}=[x_{i-\frac{1}{2}},x_{i+\frac{1}{2}}]\times[y_{j-\frac{1}{2}},y_{j+\frac{1}{2}}]$，
+这里~$x_{i+\frac{1}{2}}=\frac{(x_i+x_{i+1})}{2}$，$y_{j+\frac{1}{2}}=\frac{(y_j+y_{j+1})}{2}$。
+
+对于系统~(\ref{nonequilibrium_2d_convective})，守恒变量和通量分别定义为
+\begin{equation}\label{nonequilibrium_2d_variables}
+U=
+\begin{pmatrix}
+ \rho\vspace{1ex}\\
+ \rho{u}\vspace{1ex}\\
+ \rho{v}\vspace{1ex}\\
+ \rho{E^*}\vspace{1ex}\\
+ {S_r}\vspace{1ex}\\
+\end{pmatrix}
+,
+~~~
+F(U)=
+\begin{pmatrix}
+ \rho {u}\vspace{1ex}\\
+ \rho {{u}}^2+p^*\vspace{1ex}\\
+  \rho {uv}\vspace{1ex}\\
+ (\rho {E}^* +p^*){{u}}\vspace{1ex}\\
+ {S_r}{u}\\
+\end{pmatrix},
+~~~
+G(U)=
+\begin{pmatrix}
+ \rho {v}\vspace{1ex}\\
+ \rho {{uv}}\vspace{1ex}\\
+  \rho {v}^2+p^*\vspace{1ex}\\
+ (\rho {E}^* +p^*){{v}}\vspace{1ex}\\
+ {S_r}{v}\\
+\end{pmatrix}.
+\end{equation}
+对于系统~(\ref{equilibrium_2d_convective})，守恒变量和通量分别定义为
+\begin{equation}\label{4.2}
+U=
+\begin{pmatrix}
+ \rho\vspace{1ex}\\
+ \rho{u}\vspace{1ex}\\
+ \rho{v}\vspace{1ex}\\
+ \rho{E^*}\vspace{1ex}\\
+\end{pmatrix}
+,
+~~~
+F(U)=
+\begin{pmatrix}
+ \rho {u}\vspace{1ex}\\
+ \rho {{u}}^2+p^*\vspace{1ex}\\
+  \rho {uv}\vspace{1ex}\\
+ (\rho {E}^* +p^*){{u}}\\
+\end{pmatrix},
+~~~
+G(U)=
+\begin{pmatrix}
+ \rho {v}\vspace{1ex}\\
+ \rho {{uv}}\vspace{1ex}\\
+  \rho {v}^2+p^*\vspace{1ex}\\
+ (\rho {E}^* +p^*){{v}}\\
+\end{pmatrix}.
+\end{equation}
+
+那么显式守恒的完全离散格式可以写作，
+\begin{equation}\label{nonequilibrium_discrete_scheme}
+\mathbf{U}^{n+1}_{i,j}=\mathbf{U}^n_{i,j}+\frac{\Delta t}{\Delta x}(F(\mathbf{U}^{n+\frac{1}{2}}_{i-\frac{1}{2},j})-F(\mathbf{U}^{n+\frac{1}{2}}_{i+\frac{1}{2},j}))+\frac{\Delta t}{\Delta y}(G(\mathbf{U}^{n+\frac{1}{2}}_{i,j-\frac{1}{2}})-G(\mathbf{U}^{n+\frac{1}{2}}_{i,j+\frac{1}{2}})),
+\end{equation}
+这里~$\mathbf{U}^n_{ij}$ 是变量~$\mathbf{U}$ 在~$t^n:=n\triangle t$ 时刻单元网格~$I_{ij}$ 上的平均值。
+$\mathbf{U}^{n+\frac{1}{2}}_{i+\frac{1}{2},j}$ 和~$\mathbf{U}^{n+\frac{1}{2}}_{i,j+\frac{1}{2}}$ 分别是~$[t_n,t_{n+1}]$ 时刻~$x$ 轴方向和~$y$ 轴方向网格界面的均值。
+时间步长~$\triangle t$ 为
+ \begin{equation}\label{nonequilibrium_timestep}
+\Delta t=C_{cfl}\times min_{i,j}(\frac{\bigtriangleup x_{i,j}}{S^{n,x}_{i,j}},\frac{\bigtriangleup y_{i,j}}{S^{n,y}_{i,j}}),
+\end{equation}
+这里~$S^{n,x}_{i,j}$ 和~$S^{n,y}_{i,j}$ 分别是~$t^n$ 时刻~$x$ 轴方向和~$y$ 轴方向最大波速传播的距离。
+这里，$C_{cfl}$ 是~CFL 数，并且满足~$0<C_{cfl}\leq \frac{1}{2}$。穿透边界条件可选择为
+\begin{align}\label{nonequilibrium_boundary}
+\left\{
+\begin{array}{ll}
+\mathbf{W}^n_{-1,j}=\mathbf{W}^n_{2,j},~~\mathbf{W}^n_{0,j}=\mathbf{W}^n_{1,j},~~\mathbf{W}^n_{N_x+1,j}=\mathbf{W}^n_{N_x,j},&\mathbf{W}^n_{N_x+2,j}=\mathbf{W}^n_{N_x-1,j}, \\
+&for~j=-1,\cdots,N_y+2;\vspace{1ex}\\
+\mathbf{W}^n_{i,-1}=\mathbf{W}^n_{i,2},~~~\mathbf{W}^n_{i,0}=\mathbf{W}^n_{i,1},~~~\mathbf{W}^n_{i,N_y+1}=\mathbf{W}^n_{i,N_y},&\mathbf{W}^n_{i,N_y+2}=\mathbf{W}^n_{i,N_y-1}, \\
+&for~i=-1,\cdots,N_x+2.\\
+\end{array}
+\right.
+\end{align}
+%类似于Euler方程组的HLLC解法器，可以得到系统(\ref{nonequilibrium_2d_convective})修正的HLLC算法。
+%对于系统(\ref{nonequilibrium_2d_convective})$x$方向的一维黎曼问题，中间状态由下式给出
+%\begin{equation}
+%{U_*}_K=\rho_K\left(\frac{S_K-u_K}{S_K-S_*}\right)
+%\begin{pmatrix}
+% 1\vspace{1ex}\\
+% S_*\vspace{1ex}\\
+% v_K\vspace{1ex}\\
+% \frac{E_K}{\rho_K}+(S_K-u_K)\left[S_*+\frac{p_K}{\rho_K*(S_K-u_K)}\right]\vspace{1ex}\\
+% \frac{{{S_r}_K}}{\rho_K}\\
+%\end{pmatrix},
+%\end{equation}
+%其中$K=L$ 和 $K=R$。与此同时，中间状态的通量为
+%\begin{equation}
+%{F_*}_K=F_K+S_K({U_*}_K-U_K).
+%\end{equation}
+%这里$S_R, S_L$和$S_* $分别表示最快、最慢和中间的波速。 $S_L, S_R$ 可以由Roe平均特征值得到。
+%$S_*$ 可以由
+%\begin{equation}
+%S_*=\frac{p_R^*-p_L^*+\rho_L u_L (S_L-u_L)-\rho_R u_R (S_R-u_R)}{\rho_L(S_L-u_L)-\rho_R(S_R-u_R)},
+%\end{equation}
+%定义。
+%对应的HLLC数值通量为
+%\begin{equation}
+%F_{i+\frac{1}{2}}=\left\{
+%    \begin{array}{llll}
+%    F_L,~~0\leq S_L\vspace{1ex}\\
+%    F_{*L},~~S_L\leq0\leq S_*\vspace{1ex}\\
+%    F_{*R},~~S_*\leq0\leq S_R\vspace{1ex}\\
+%    F_R,~~0\geq S_L.\\
+%    \end{array}
+%    \right.
+%\end{equation}
+%类似可得系统(\ref{equilibrium_2d_convective})修正的HLLC算法。
+
+对于二维系统~(\ref{nonequilibrium_2d_convective}) 和~(\ref{equilibrium_2d_convective}) 的~MUSCL-Hancock 格式如下所示 :
+
+\textbf{第一步}：给定分片初值，网格~$I_{ij}$ 端点~$\mathbf{U}_{ij}(x,y)$ 的值可以写作
+    $\mathbf{U}^{n,+}_{i-\frac{1}{2},j}=\mathbf{U}^n_{i,j}-\frac{\triangle x}{2}\Delta_i$， $\mathbf{U}^{n,-}_{i+\frac{1}{2},j}=\mathbf{U}^n_{i,j}+\frac{\triangle x}{2}\Delta_i$，
+    $\mathbf{U}^{n,+}_{i,j-\frac{1}{2}}=\mathbf{U}^n_{i,j}-\frac{\triangle y}{2}\Delta_j$， $\mathbf{U}^{n,-}_{i,j+\frac{1}{2}}=\mathbf{U}^n_{i,j}+\frac{\triangle y}{2}\Delta_j$。
+    $\Delta_i$ 和~$\Delta_j$ 是斜率，可以由~minmod~limiter 算法得到，
+ \begin{equation}\label{3.25}
+\Delta_i=minmod(\theta\frac{\mathbf{U}^{n}_{i,j}-\mathbf{U}^{n}_{i-1,j}}{\triangle x},\frac{\mathbf{U}^{n}_{i+1,j}-\mathbf{U}^{n}_{i-1,j}}{2\triangle x},\theta\frac{\mathbf{U}^{n}_{i+1,j}-\mathbf{U}^{n}_{i,j}}{\triangle x}),
+\end{equation}
+\begin{equation}\label{3.26}
+\Delta_j=minmod(\theta\frac{\mathbf{U}^{n}_{i,j}-\mathbf{U}^{n}_{i,j-1}}{\triangle y},\frac{\mathbf{U}^{n}_{i,j+1}-\mathbf{U}^{n}_{i,j-1}}{2\triangle y},\theta\frac{\mathbf{U}^{n}_{i,j+1}-\mathbf{U}^{n}_{i,j}}{\triangle y}).
+\end{equation}
+其中，参数取值为~$\theta\in[1,2]$。 %并且非线性minmod~limiter定义为
+%\begin{equation}
+%minmod(x_1,x_2,\cdots)=\left\{
+%\begin{array}{lll}
+%min_j\{x_j\}, ~if ~x_j>0~\forall j,\vspace{1ex}\\
+%max_j\{x_j\}, ~if ~x_j<0~\forall j,\vspace{1ex}\\
+%0,~otherwise.
+%\end{array}
+%\right.
+%\end{equation}
+
+\textbf{第二步}：$\mathbf{U}^{n+\frac{1}{2},+}_{i-\frac{1}{2},j}$, $\mathbf{U}^{n+\frac{1}{2},-}_{i+\frac{1}{2},j}$, $\mathbf{U}^{n+\frac{1}{2},+}_{i,j-\frac{1}{2}}$ 和~$\mathbf{U}^{n+\frac{1}{2},-}_{i,j+\frac{1}{2}}$ 是在半个时间步~$\frac{\triangle t}{2}$ 的估值，并有
+\begin{equation}\label{nonequilibrium_evolution1}
+{{\mathbf{U}}}^{n+\frac{1}{2},+}_{i-\frac{1}{2},j}=\mathbf{U}^{n,+}_{i-\frac{1}{2},j}+\frac{1}{2}\frac{\Delta t}{\Delta x}(F(\mathbf{U}^{n,+}_{i-\frac{1}{2},j})-F(\mathbf{U}^{n,-}_{i+\frac{1}{2},j}))+\frac{1}{2}\frac{\Delta t}{\Delta y}(G(\mathbf{U}^{n,+}_{i,j-\frac{1}{2}})-G(\mathbf{U}^{n,-}_{i,j+\frac{1}{2}})),
+\end{equation}
+\begin{equation}\label{nonequilibrium_evolution2}
+{\mathbf{U}}^{n+\frac{1}{2},-}_{i+\frac{1}{2},j}={\mathbf{U}}^{n,-}_{i+\frac{1}{2},j}+\frac{1}{2}\frac{\Delta t}{\Delta x}(F(\mathbf{U}^{n,+}_{i-\frac{1}{2},j})-F(\mathbf{U}^{n,-}_{i+\frac{1}{2},j}))+\frac{1}{2}\frac{\Delta t}{\Delta y}(G(\mathbf{U}^{n,+}_{i,j-\frac{1}{2}})-G(\mathbf{U}^{n,-}_{i,j+\frac{1}{2}})),
+\end{equation}
+\begin{equation}\label{nonequilibrium_evolution3}
+{{\mathbf{U}}}^{n+\frac{1}{2},+}_{i,j-\frac{1}{2}}=\mathbf{U}^{n,+}_{i,j-\frac{1}{2}}+\frac{1}{2}\frac{\Delta t}{\Delta x}(F(\mathbf{U}^{n,+}_{i-\frac{1}{2},j})-F(\mathbf{U}^{n,-}_{i+\frac{1}{2},j}))+\frac{1}{2}\frac{\Delta t}{\Delta y}(G(\mathbf{U}^{n,+}_{i,j-\frac{1}{2}})-G(\mathbf{U}^{n,-}_{i,j+\frac{1}{2}})),
+\end{equation}
+\begin{equation}\label{nonequilibrium_evolution4}
+{\mathbf{U}}^{n+\frac{1}{2},-}_{i,j+\frac{1}{2}}={\mathbf{U}}^{n,-}_{i,j+\frac{1}{2}}+\frac{1}{2}\frac{\Delta t}{\Delta x}(F(\mathbf{U}^{n,+}_{i-\frac{1}{2},j})-F(\mathbf{U}^{n,-}_{i+\frac{1}{2},j}))+\frac{1}{2}\frac{\Delta t}{\Delta y}(G(\mathbf{U}^{n,+}_{i,j-\frac{1}{2}})-G(\mathbf{U}^{n,-}_{i,j+\frac{1}{2}})).
+\end{equation}
+
+\textbf{第三步}：对于系统~(\ref{nonequilibrium_2d_convective}) 和~(\ref{equilibrium_2d_convective}) $x$ 方向分裂得到的一维黎曼问题，其初值为~$U_L=\mathbf{U}^{n+\frac{1}{2},-}_{i+\frac{1}{2},j}$ 和~$U_R=\mathbf{U}^{n+\frac{1}{2},+}_{i+\frac{1}{2},j}$。对应的界面通量~$F({{\mathbf{U}}}^{n+\frac{1}{2}}_{i+\frac{1}{2},j})$ 可以由上面修正的HLLC解法器获得。
+相似的，对于初值为~$U_L=\mathbf{U}^{n+\frac{1}{2},-}_{i,j+\frac{1}{2}}$ 和~$U_R=\mathbf{U}^{n+\frac{1}{2},+}_{i,j+\frac{1}{2}}$，系统~(\ref{nonequilibrium_2d_convective}) 和~(\ref{equilibrium_2d_convective}) $y$ 方向分裂得到的一维黎曼问题，
+可以得到其对应的界面通量~$G({{\mathbf{U}}}^{n+\frac{1}{2}}_{i,j+\frac{1}{2}})$.
+
+    %$\mathbf{Step ~4}$. The conserved variables are updated by the scheme $(\ref{3.22})$, go to Step 1 by replacing $n$ with $n+1$.
+\textbf{第四步}：中间结果可以由公式~(\ref{nonequilibrium_discrete_scheme}) 更新得到，
+    \begin{equation}\label{3.31}
+    \mathbf{U}^{mid}=\left\{
+    \begin{array}{lllll}
+    \rho^{n+1}_{i,j}\vspace{1ex}\\
+    (\rho u)^{n+1}_{i,j}\vspace{1ex}\\
+    (\rho v)^{n+1}_{i,j}\vspace{1ex}\\
+    E^{*mid}_{i,j}\vspace{1ex}\\
+    {S_r}^{mid}_{i,j}\\
+    \end{array}
+    \right\},
+    \end{equation}
+    或
+    \begin{equation}\label{3.32}
+    \mathbf{U}^{mid}=\left\{
+    \begin{array}{llll}
+    \rho^{n+1}_{i,j}\vspace{1ex}\\
+    (\rho u)^{n+1}_{i,j}\vspace{1ex}\\
+    (\rho v)^{n+1}_{i,j}\vspace{1ex}\\
+    E^{*mid}_{i,j}\\
+    \end{array}
+    \right\}.
+    \end{equation}
+
+\textbf{第五步}：经过热扩散的数值计算得到更新后的流体温度和辐射温度，则返回~\textbf{第一步}，进入下一个时间步迭代。
+
+\BiSection{辐射扩散系统的热传输}{The heat transfer in the radiative diffusion system}
+正如文献~\cite{2017Second} 所展现的，TR/BDF2 方法是一个隐式格式，并且在每个时间步上都需要分两个阶段求解。 在每个时间步上，TR/BDF2 方法的计算成本约等于两个~Crank-Nicolson 方法。
+为了能够使得在每个阶段都是守恒形式，将采用~TR/BDF2 变换的方法求解辐射热传导问题。本节中，首先介绍~TR/BDF2 的变换形式。然后将该变换的形式应用到非平衡扩散极限下灰度辐射流体力学模型的热传输部分。
+最后，将给出该扩散模型关于时间变量的渐进分析。
+
+\BiSubsection{TR/BDF2 的变换形式}{The alternative form of TR/BDF2 method}
+下面考虑非线性方程,
+    \begin{equation}\label{nonlinear_equation}
+    \frac{\partial f}{\partial t}=\mathbf{A}f,
+    \end{equation}
+这里~$\mathbf{A}$ 是非线性算子。\\
+这个TR/BDF2方法可写作，
+\begin{equation}\label{TR/BDF2_1}
+    \frac{f^{n+\gamma}-f^n}{\gamma\Delta t}=\frac{1}{2}(\mathbf{A}^{n+\gamma}f^{n+\gamma}+\mathbf{A}^nf^n),
+    \end{equation}
+\begin{equation}\label{TR/BDF2_2}
+    \frac{(2-\gamma)f^{n+1}-\gamma^{-1}f^{n+\gamma}+\gamma^{-1}(1-\gamma)^2f^n}{\Delta t}=(1-\gamma)\mathbf{A}^{n+1}f^{n+1}.
+    \end{equation}
+在该辐射流体力学模型方法中，我们采用~$\gamma=\frac{1}{2}$，并且可将方程~(\ref{TR/BDF2_1})、(\ref{TR/BDF2_2}) 变换为
+\begin{equation}\label{TR/BDF2_1change}
+\frac{2(f^{n+\frac{1}{2}}-f^n)}{\Delta t}=\frac{1}{2}(\mathbf{A}^{n+\frac{1}{2}}f^{n+\frac{1}{2}}+\mathbf{A}^nf^n),
+\end{equation}
+\begin{equation}\label{TR/BDF2_2change}
+\frac{3f^{n+1}-4f^{n+\frac{1}{2}}+f^n}{\Delta t}=\mathbf{A}^{n+1}f^{n+1},
+\end{equation}
+值得注意的是方程~(\ref{TR/BDF2_2change}) 并不是守恒形式~\cite{2017Second}。为了在每个时间步上，使系统~(\ref{TR/BDF2_1change})，(\ref{TR/BDF2_2change}) 的每一个阶段的计算均为守恒形式，将采用以下~TR/BDF2 方法的变换形式，
+ \begin{equation}\label{TR/BDF2_1alternative}
+    \frac{2(f^{n+\frac{1}{2}}-f^n)}{\Delta t}=\frac{1}{2}(\mathbf{A}^{n+\frac{1}{2}}f^{n+\frac{1}{2}}+\mathbf{A}^nf^n),
+    \end{equation}
+     \begin{equation}\label{TR/BDF2_2alternative}
+    \frac{2(f^{n+1}-f^{n+\frac{1}{2}})}{\Delta t}=\frac{2}{3}\mathbf{A}^{n+1}f^{n+1}+\frac{1}{6}\mathbf{A}^{n+\frac{1}{2}}f^{n+\frac{1}{2}}+\frac{1}{6}\mathbf{A}^{n}f^{n}.
+    \end{equation}
+上式可由方程~(\ref{TR/BDF2_1change})，(\ref{TR/BDF2_2change}) 推导得到。
+
+\BiSubsection{应用于辐射扩散热传输的~TR/BDF2 方法变换形式}{The alternative form of TR/BDF2 method for the transfer of the radiative diffusion system}
+通过算子分裂的方法，非平衡扩散极限下的灰度辐射流体力学模型热扩散部分可以写作
+\begin{equation}\label{nonequilibrium_heat_transfer2d}
+\left\{
+ \begin{array}{lllll}
+ \partial_t\rho=0, \vspace{1ex}\\
+ \partial_t(\rho u)=0,\vspace{1ex}\\
+ \partial_t(\rho v)=0,\vspace{1ex}\\
+ \partial_t(\rho E)=-\mathcal{P}_0\sigma(T^4-E_r),\vspace{1ex}\\
+\partial_t E_r=\partial_x(\kappa(\rho,T)\partial_x E_r)+\partial_y(\kappa(\rho,T)\partial_y E_r)+\sigma(T^4-E_r).\\
+\end{array}
+\right.
+\end{equation}
+系统~(\ref{nonequilibrium_heat_transfer2d}) 的第四个方程可以得到一个常微分方程，
+\begin{equation}\label{nonequilibrium_fourth}
+\rho C_v\partial_t T=-\mathcal{P}_0\sigma(T^4-E_r).
+\end{equation}
+下面将~TR/BDF2 的变换形式应用到系统~(\ref{nonequilibrium_heat_transfer2d}) 中，可得
+\begin{align}\label{nonequilibrium_heat_scheme}
+\left\{
+\begin{array}{llllllll}
+\rho^n_{i,j} C_v\frac{2(T^{n+\frac{1}{2}}_{i,j}-T^n_{i,j})}{\Delta t^n}=-\frac{1}{2}\mathcal{P}_0\sigma^n_{i,j}((T^{n+\frac{1}{2}}_{i,j})^4-{E_{r~i,j}^{n+\frac{1}{2}}})-\frac{1}{2}\mathcal{P}_0\sigma^n_{i,j}((T^{n}_{i,j})^4-{E_{r~i,j}^{n}}),\vspace{1ex}\\
+\rho^n_{i,j} C_v\frac{2(T^{n+1}_{i,j}-T^{n+\frac{1}{2}}_{i,j})}{\Delta  t^n}=-\frac{2}{3}\mathcal{P}_0\sigma^n_{i,j}((T^{n+1}_{i,j})^4-{E_{r~i,j}^{n+1}})-\frac{1}{6}\mathcal{P}_0\sigma^n_{i,j}((T^{n+\frac{1}{2}}_{i,j})^4-{E_{r~i,j}^{n+\frac{1}{2}}})\vspace{1ex}\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~-\frac{1}{6}\mathcal{P}_0\sigma^n_{i,j}((T^{n}_{i,j})^4-{E_{r~i,j}^{n}}),\vspace{1ex}\\
+\frac{2({E_{r~i,j}^{n+\frac{1}{2}}}-{E_{r~i,j}^{n}})}{\Delta t^n}
+-X_{i,j}^{n+\frac{1}{2}}
+-Y_{i,j}^{n+\frac{1}{2}}
+-X_{i,j}^{n}
+-Y_{i,j}^{n}
+=\frac{1}{2}\sigma^n_{i,j}((T^{n+\frac{1}{2}}_{i,j})^4-{E_{r~i,j}^{n+\frac{1}{2}}})+\frac{1}{2}\sigma^n_{i,j}((T^{n}_{i,j})^4-{E_{r~i,j}^{n}}),\vspace{1ex}\\
+\frac{2({E_{r~i,j}^{n+1}}-{E_{r~i,j}^{n+\frac{1}{2}}})}{\Delta t^n}
+-\frac{4}{3}X_{i,j}^{n+1}
+%\frac{4k^n_{i+\frac{1}{2},j}\frac{{E^{n+1}_r}_{i+1,j}-{E^{n+1}_r}_{i,j}}{\Delta x_{i+1,j}}-4k^n_{i-\frac{1}{2},j}\frac{{E^{n+1}_r}_{i,j}-{E^{n+1}_r}_{i-1,j}}{\Delta x_{i,j}}}{3(\Delta x_{i,j}+\Delta x_{i+1,j})}
+-\frac{4}{3}Y_{i,j}^{n+1}
+%\frac{4k^n_{i,j+\frac{1}{2}}\frac{{E^{n+1}_r}_{i,j+1}-{E^{n+1}_r}_{i,j}}{\Delta y_{i,j+1}}-4k^n_{i,j-\frac{1}{2}}\frac{{E^{n+1}_r}_{i,j}-{E^{n+1}_r}_{i,j-1}}{\Delta y_{i,j}}}{3(\Delta y_{i,j}+\Delta y_{i,j+1})}\\
+-\frac{1}{3}X_{i,j}^{n+\frac{1}{2}}
+%\frac{k^n_{i+\frac{1}{2},j}\frac{{E^{n+\frac{1}{2}}_r}_{i+1,j}-{E^{n+\frac{1}{2}}_r}_{i,j}}{\Delta x_{i+1,j}}-k^n_{i-\frac{1}{2},j}\frac{{E^{n+\frac{1}{2}}_r}_{i,j}-{E^{n+\frac{1}{2}}_r}_{i-1,j}}{\Delta x_{i,j}}}{3(\Delta x_{i,j}+\Delta x_{i+1,j})}
+-\frac{1}{3}Y_{i,j}^{n+\frac{1}{2}}
+%\frac{k^n_{i,j+\frac{1}{2}}\frac{{E^{n+\frac{1}{2}}_r}_{i,j+1}-{E^{n+\frac{1}{2}}_r}_{i,j}}{\Delta y_{i,j+1}}-k^n_{i,j-\frac{1}{2}}\frac{{E^{n+\frac{1}{2}}_r}_{i,j}-{E^{n+\frac{1}{2}}_r}_{i,j-1}}{\Delta y_{i,j}}}{3(\Delta y_{i,j}+\Delta y_{i,j+1})}\\
+-\frac{1}{3}X_{i,j}^{n}
+%\frac{k^n_{i+\frac{1}{2},j}\frac{{E^{n}_r}_{i+1,j}-{E^{n}_r}_{i,j}}{\Delta x_{i+1,j}}-k^n_{i-\frac{1}{2},j}\frac{{E^{n}_r}_{i,j}-{E^{n}_r}_{i-1,j}}{\Delta x_{i,j}}}{3(\Delta x_{i,j}+\Delta x_{i+1,j})}
+-\frac{1}{3}Y_{i,j}^{n}
+%\frac{k^n_{i,j+\frac{1}{2}}\frac{{E^{n}_r}_{i,j+1}-{E^{n}_r}_{i,j}}{\Delta y_{i,j+1}}-k^n_{i,j-\frac{1}{2}}\frac{{E^{n}_r}_{i,j}-{E^{n}_r}_{i,j-1}}{\Delta y_{i,j}}}{3(\Delta y_{i,j}+\Delta y_{i,j+1})}\\
+\\~~~~~~~~~~~~~~~~~~~~~~~~~~
+=\frac{2}{3}\sigma^n_{i,j}((T^{n+1}_{i,j})^4-{E_{r~i,j}^{n+1}})+\frac{1}{6}\sigma^n_{i,j}((T^{n+\frac{1}{2}}_{i,j})^4-{E_{r~i,j}^{n+\frac{1}{2}}})+\frac{1}{6}\sigma^n_{i,j}((T^{n}_{i,j})^4-{E_{r~i,j}^{n}}),\vspace{1ex}\\
+\end{array}
+\right.
+\end{align}
+其中$X_{i,j}^{n+\frac{1}{2}}=\frac{k^n_{i+\frac{1}{2},j}({E_{r~i+1,j}^{n+\frac{1}{2}}}-{E_{r~i,j}^{n+\frac{1}{2}}})-k^n_{i-\frac{1}{2},j}({E_{r~i,j}^{n+\frac{1}{2}}}-{E_{r~i-1,j}^{n+\frac{1}{2}}})}{2\Delta x^2}$,
+$Y_{i,j}^{n+\frac{1}{2}}=\frac{k^n_{i,j+\frac{1}{2}}({E_{r~i,j+1}^{n+\frac{1}{2}}}-{E_{r~i,j}^{n+\frac{1}{2}}})-k^n_{i,j-\frac{1}{2}}({E_{r~i,j}^{n+\frac{1}{2}}}-{E_{r~i,j-1}^{n+\frac{1}{2}}})}{2\Delta y^2}$,
+%$X_{i+1,j}^{n}=\frac{k^n_{i+\frac{1}{2},j}\frac{{E^{n}_r}_{i+1,j}-{E^{n}_r}_{i,j}}{\Delta x_{i+1,j}}-k^n_{i-\frac{1}{2},j}\frac{{E^{n}_r}_{i,j}-{E^{n}_r}_{i-1,j}}{\Delta x_{i,j}}}{\Delta x_{i,j}+\Delta x_{i+1,j}}$,
+%$X_{i,j+1}^{n}=\frac{k^n_{i,j+\frac{1}{2}}\frac{{E^{n}_r}_{i,j+1}-{E^{n}_r}_{i,j}}{\Delta y_{i,j+1}}-k^n_{i,j-\frac{1}{2}}\frac{{E^{n}_r}_{i,j}-{E^{n}_r}_{i,j-1}}{\Delta y_{i,j}}}{\Delta y_{i,j}+\Delta y_{i,j+1}}$,
+和
+$\frac{2}{k^n_{i+\frac{1}{2},j}}=\frac{1}{k^n_{i,j}}+\frac{1}{k^n_{i+1,j}}$.
+
+类似，平衡扩散极限下的辐射流体力学模型热扩散部分可以写作
+\begin{equation}\label{equilibrium_heat_transfer2d}
+\left\{
+ \begin{array}{llll}
+ \partial_t\rho=0, \vspace{1ex}\\
+ \partial_t(\rho u)=0,\vspace{1ex}\\
+ \partial_t(\rho v)=0,\vspace{1ex}\\
+ \partial_t(\rho E^*)=\partial_x(\kappa(\rho,T)\partial_x T)+\partial_y(\kappa(\rho,T)\partial_y T).\\
+\end{array}
+\right.
+\end{equation}
+将~TR/BDF2 的变换形式应用到系统~(\ref{equilibrium_heat_transfer2d}) 中，可得
+\begin{equation}\label{equilibrium_heat_scheme}
+\left\{
+\begin{array}{ll}
+\frac{2({E_T}^{n+\frac{1}{2}}_{i,j}-{E_T}^{n}_{i,j})}{\Delta t}
+-TX_{i,j}^{n+\frac{1}{2}}
+-TY_{i,j}^{n+\frac{1}{2}}
+-TX_{i,j}^{n}
+-TY_{i,j}^{n}=0,\vspace{1ex}\\
+\frac{2({E_T}^{n+1}_{i,j}-{E_T}^{n+\frac{1}{2}}_{i,j})}{\Delta t}
+-\frac{4}{3}TX_{i,j}^{n+1}
+-\frac{4}{3}TY_{i,j}^{n+1}
+-\frac{1}{3}TX_{i,j}^{n+\frac{1}{2}}
+-\frac{1}{3}TY_{i,j}^{n+\frac{1}{2}}
+-\frac{1}{3}TX_{i,j}^{n}
+-\frac{1}{3}TY_{i,j}^{n}=0,
+\end{array}
+\right.
+\end{equation}
+其中$TX_{i,j}^{n+\frac{1}{2}}=\frac{k^n_{i+\frac{1}{2},j}(T_{i+1,j}^{n+\frac{1}{2}}-T_{i,j}^{n+\frac{1}{2}})-k^n_{i-\frac{1}{2},j}(T_{i,j}^{n+\frac{1}{2}}-T_{i-1,j}^{n+\frac{1}{2}})}{2\Delta x^2}$,
+$TY_{i,j}^{n+\frac{1}{2}}=\frac{k^n_{i,j+\frac{1}{2}}(T_{i,j+1}^{n+\frac{1}{2}}-T_{i,j}^{n+\frac{1}{2}})-k^n_{i,j-\frac{1}{2}}(T_{i,j}^{n+\frac{1}{2}}-T_{i,j-1}^{n+\frac{1}{2}})}{2\Delta y^2}$.
+
+\BiSubsection{渐近分析}{Asymptotic analysis}
+文献~\cite{1989Asymptotic,Edward1987Asymptotic} 中详细的讨论了传输系统扩散极限下空间离散的问题。本节，我们认为其空间离散是正确的，并给出了非平衡辐射扩散模型关于时间的渐近分析，这类似于~Knoll，Densmore 等人的工作~\cite{2007Numerical,2004Asymptotic}。
+首先，得到非平衡辐射扩散模型的连续性分析。然后，得到TR/BDF2方法变换形式的离散分析。
+
+\BiSubsubsection{连续性分析}{Continuum analysis}
+下面，考虑非平衡扩散极限下辐射模型的扩散系统~\cite{2007Numerical}，
+\begin{equation}\label{nonequilibrium_Continuum}
+\begin{array}{ll}
+\partial_t T = -c\mathcal{P}_0\sigma(T^4-E_r),\vspace{1ex}\\
+\partial_t E_r-\partial_x(k\partial_x E_r)-\partial_y(k\partial_y E_r)=c\sigma(\mathcal{P}_0T^4-E_r),
+\end{array}
+\end{equation}
+其中~$\sigma=\sigma_a T^{-3}$ 和~$\sigma_a$ 是参数常数。
+当流体温度等于辐射温度时，系统~(\ref{nonequilibrium_Continuum}) 将会变为
+\begin{equation}\label{equilibrium_Continuum}
+\begin{array}{ll}
+\partial_t (T+\mathcal{P}_0T^4)-\partial_x(k\partial_x \mathcal{P}_0T^4)-\partial_y(k\partial_y \mathcal{P}_0T^4)=0,
+\end{array}
+\end{equation}
+这也就是在平衡扩散极限下的模型。
+
+对非平衡扩散极限下的辐射模型~(\ref{nonequilibrium_Continuum}) 在连续形式下使用渐近分析得到其渐近模型。
+首先，将模型~(\ref{nonequilibrium_Continuum}) 中的每个量均化为无量纲的。考虑下面的无量纲化，
+\begin{equation}\label{nonequilibrium_Continuum_nondimensionalized}
+\begin{array}{ll}
+x\longrightarrow x_{ref}x,~~y\longrightarrow y_{ref}y,~~t\longrightarrow t_{ref}t,~~T\longrightarrow T_{ref}T,\vspace{1ex}\\
+E_r\longrightarrow \mathcal{P}_0T^4_{ref}E_r,~~\sigma\longrightarrow \sigma_{ref}\sigma,~~k\longrightarrow\frac{c}{\sigma_{ref}}k,
+\end{array}
+\end{equation}
+其中下标~``ref" 是每个量的量纲参考值。如文献~\cite{2007Numerical}，将系统~(\ref{nonequilibrium_Continuum}) 无量纲化后可得
+\begin{equation}\label{nonequilibrium_nondimensionalized}
+\left\{
+\begin{array}{ll}
+\frac{x_{ref}}{ct_{ref}}\partial_t T = -x_{ref}\sigma_{ref}\sigma(T^4-E_r),\vspace{1ex}\\
+\frac{x_{ref}}{ct_{ref}}\partial_t E_r-\frac{1}{x_{ref}\sigma_{ref}}\partial_x(k\partial_x E_r)-\frac{x_{ref}}{y^2_{ref}\sigma_{ref}}\partial_y(k\partial_y E_r)=x_{ref}\sigma_{ref}\sigma(T^4-E_r).
+\end{array}
+\right.
+\end{equation}
+设参数
+\begin{equation*}
+\begin{array}{ll}
+\frac{x_{ref}}{ct_{ref}} \sim \frac{1}{x_{ref}\sigma_{ref}} \sim \frac{x_{ref}}{y^2_{ref}\sigma_{ref}} \sim \varepsilon \ll 1,
+\end{array}
+\end{equation*}
+其中~$\varepsilon$ 是很小的参数。
+更进一步，可得
+\begin{equation}\label{nonequilibrium_Continuum_form}
+\begin{array}{ll}
+\varepsilon^2\partial_t T = -\sigma(T^4-E_r),\vspace{1ex}\\
+\varepsilon^2\partial_t E_r-\varepsilon^2\partial_x(k\partial_x E_r)-\varepsilon^2\partial_y(k\partial_y E_r)=\sigma(T^4-E_r).
+\end{array}
+\end{equation}
+将系统~(\ref{nonequilibrium_Continuum_form}) 中的两个方程相加可得
+\begin{equation}\label{nonequilibrium_conservation}
+\partial_t(T+E_r)-\partial_x(k\partial_x E_r)-\partial_y(k\partial_y E_r)=0,
+\end{equation}
+这是守恒状态的方程。
+
+为了能够便于对系统~(\ref{nonequilibrium_nondimensionalized}) 进行离散分析，令~$H=T^4$，则系统~(\ref{nonequilibrium_Continuum_form}) 变为
+\begin{equation}\label{nonequilibrium_Continuum_H}
+\begin{array}{ll}
+\varepsilon^2\partial_t T = -\sigma(H-E_r),\vspace{1ex}\\
+\varepsilon^2\partial_t E_r-\varepsilon^2\partial_x(k\partial_x E_r)-\varepsilon^2\partial_y(k\partial_y E_r)=\sigma(H-E_r).
+\end{array}
+\end{equation}
+接下来，对系统~(\ref{nonequilibrium_Continuum_H}) 中的变量按~$\varepsilon$ 展开可得
+\begin{equation}\label{nonequilibrium_expand}
+\begin{array}{lllll}
+T = T_0+\varepsilon T_1+\varepsilon^2T_2+\cdots,\vspace{1ex}\\
+H = H_0+\varepsilon H_1+\varepsilon^2H_2+\cdots,\vspace{1ex}\\
+E_r = {E_r}_0+\varepsilon {E_r}_1+\varepsilon^2{E_r}_2+\cdots,\vspace{1ex}\\
+k= k_0+\varepsilon k_1+\varepsilon^2k_2+\cdots,\vspace{1ex}\\
+\sigma = \sigma_0+\varepsilon \sigma_1+\varepsilon^2\sigma_2+\cdots.\\
+\end{array}
+\end{equation}
+因为有公式~$H=T^4$，所以可得以下关系
+\begin{equation*}
+\begin{array}{l}
+H=(T_0+\varepsilon T_1+\cdots)^4=T_0^4+4\varepsilon T_0^3T_1+\cdots.
+\end{array}
+\end{equation*}
+因此有
+ \begin{equation*}
+\begin{array}{ll}
+H_0=T_0^4,~~H_1=4T_0^3T_1.
+\end{array}
+\end{equation*}
+接下来，将关系式~(\ref{nonequilibrium_expand}) 代入系统~(\ref{nonequilibrium_Continuum_H}) 有
+\begin{align}\label{nonequilibrium_substituting}
+\begin{array}{lllll}
+\varepsilon^2\partial_t(T_0+\varepsilon T_1+\varepsilon^2 T_2+\cdots)&=-(\sigma_0+\varepsilon\sigma_1+\varepsilon^2\sigma_2+\cdots)\vspace{1ex}\\
+&\times(H_0+\varepsilon H_1+\varepsilon^2 H_2-E_{r0}-\varepsilon E_{r1}-\varepsilon^2 E_{r2}+\cdots),\vspace{1ex}\\
+\varepsilon^2{\partial_t (E_{r0}+\varepsilon E_{r1}+\varepsilon^2 E_{r2}+\cdots)}
+&-\varepsilon^2\partial_x((k_0+\varepsilon k_1+\varepsilon^2 k_2+\cdots)\partial_x (E_{r0}+\varepsilon E_{r1}+\varepsilon^2 E_{r2}+\cdots))\vspace{1ex}\\
+&-\varepsilon^2\partial_y((k_0+\varepsilon k_1+\varepsilon^2 k_2+\cdots)\partial_y (E_{r0}+\varepsilon E_{r1}+\varepsilon^2 E_{r2}+\cdots))\vspace{1ex}\\
+&=(\sigma_0+\varepsilon\sigma_1+\varepsilon^2\sigma_2+\cdots)\vspace{1ex}\\
+&\times(H_0+\varepsilon H_1+\varepsilon^2 H_2-E_{r0}-\varepsilon E_{r1}-\varepsilon^2 E_{r2}+\cdots).
+\end{array}
+\end{align}
+由系统~(\ref{nonequilibrium_substituting}) 的第一个方程，可得
+\begin{align}\label{nonequilibrium_55}
+\begin{array}{lllll}
+\sigma_0(H_0-E_{r0})&+\varepsilon(\sigma_0(H_1-E_{r1})+\sigma_1(H_0-E_{r0}))\vspace{1ex}\\
+&+\varepsilon^2(\partial_t T_0+\sigma_0(H_2-E_{r2})+\sigma_1(H_1-E_{r1})+\sigma_2(H_0-E_{r0}))+\cdots=0.
+\end{array}
+\end{align}
+因此，系统~(\ref{nonequilibrium_Continuum_form}) 的~$O(\varepsilon^0)$ 公式为
+\begin{equation}\label{nonequilibrium_56}
+{E_r}_0=H_0=T^4_0,
+\end{equation}
+这关系式可以由~(\ref{nonequilibrium_55}) 得到。
+因此，将关系式~(\ref{nonequilibrium_expand}) 替换到系统~(\ref{equilibrium_Continuum}) 可得
+\begin{align}
+\begin{array}{ll}
+\partial_t(T_0+\varepsilon T_1+\varepsilon^2T_2&+{E_r}_0+\varepsilon {E_r}_1+\varepsilon^2{E_r}_2+\cdots)\\
+&-\partial_x((k_0+\varepsilon k_1+\varepsilon^2 k_2+\cdots)\partial_x ({E_r}_0+\varepsilon {E_r}_1+\varepsilon^2{E_r}_2+\cdots))\\
+&-\partial_y((k_0+\varepsilon k_1+\varepsilon^2 k_2+\cdots)\partial_y ({E_r}_0+\varepsilon {E_r}_1+\varepsilon^2{E_r}_2+\cdots))=0.
+\end{array}
+\end{align}
+进一步化简可得，
+\begin{align}\label{nonequilibrium_57}
+\begin{array}{ll}
+\partial_t(T_0+E_{r0})&-\partial_x(k_0\partial_x E_{r0})-\partial_y(k_0\partial_y E_{r0})\vspace{1ex}\\
+&+\varepsilon(\partial_t(T_1+{E_r}_1)-\partial_x(k_1\partial_x {E_r}_0)-\partial_y(k_1\partial_y {E_r}_0)-\partial_x(k_0\partial_x {E_r}_1)-\partial_y(k_0\partial_y {E_r}_1))\vspace{1ex}\\
+&+\cdots=0.
+\end{array}
+\end{align}
+
+对于系统~(\ref{nonequilibrium_conservation}) 的~$O(\varepsilon^0)$ 公式有
+\begin{equation}\label{nonequilibrium_58}
+\partial_t(T_0+E_{r0})-\partial_x(k_0\partial_x E_{r0})-\partial_y(k_0\partial_y E_{r0})=0.
+\end{equation}
+%The equation (\ref{2.16}) is simply the nondimensional version of equation (\ref{2.3.3}).
+
+正如~Knoll，Lowrie 和~Morel 所说~\cite{2007Numerical}，时间离散保证~$O(\varepsilon^1)$ 的渐近行为是必须的。由方程(\ref{nonequilibrium_55})、(\ref{nonequilibrium_56})，
+系统~(\ref{nonequilibrium_Continuum_H}) 的~${O}(\varepsilon^1)$ 有
+\begin{equation}\label{nonequilibrium_59}
+{E_r}_1=H_1=4T^3_0T_1.
+\end{equation}
+由方程~(\ref{nonequilibrium_conservation})、(\ref{nonequilibrium_57}) 和~(\ref{nonequilibrium_58})，可得
+\begin{equation}\label{nonequilibrium_60}
+\partial_t(T_1+{E_r}_1)-\partial_x(k_1\partial_x {E_r}_0)-\partial_y(k_1\partial_y {E_r}_0)-\partial_x(k_0\partial_x {E_r}_1)-\partial_y(k_0\partial_y {E_r}_1)=0.
+\end{equation}
+对非平衡扩散极限下的辐射模型~(\ref{nonequilibrium_Continuum}) 在连续形式下的渐近分析完成。
+ %We will apply the analysis to the time discretizations in the following subsection.
+
+\BiSubsubsection{离散分析}{Discrete analysis}
+在本节中，将从时间离散的角度系统分析~(\ref{nonequilibrium_Continuum}) 的渐近形式。
+%The asymptotic solution obtained by the time discretization of the nonequilibrium system will produce a numerical solution equivalent to the equilibrium equation.
+%Because the equilibration time tends to zero as $\varepsilon$ goes to zero, the non-asymptotic preserving scheme requires a time step that tends to zero
+%as $\varepsilon$ goes to zero \cite{Knoll}. It can lead to the arbitrarily small time step in the asymptotic problem. At the same time, the asymptotic preserving method is independent of $\varepsilon$ up to leading order. It requires a time step that depends only upon temporal variation for the asymptotic solutions.
+对于系统~(\ref{nonequilibrium_conservation})，将使用~TR/BDF2 变换的方法得到其离散问题
+\begin{align}\label{nonequilibrium_61}
+\left\{
+\begin{array}{llllll}
+\varepsilon^2\frac{2(T^{n+\frac{1}{2}}-T^n)}{\Delta t} &= -\frac{1}{2}\sigma^{n}(H^{n+\frac{1}{2}}-E_r^{n+\frac{1}{2}}) -\frac{1}{2}\sigma^{n}(H^{n}-E_r^{n}),\vspace{1ex}\\
+\varepsilon^2\frac{2(T^{n+1}-T^{n+\frac{1}{2}})}{\Delta t} &= -\frac{2}{3}\sigma^{n}(H^{n+1}-E_r^{n+1}) -\frac{1}{6}\sigma^{n}(H^{n+\frac{1}{2}}-E_r^{n+\frac{1}{2}}) -\frac{1}{6}\sigma^{n}(H^{n}-E_r^{n}),\vspace{1ex}\\
+\varepsilon^2\frac{2(E_r^{n+\frac{1}{2}}-E_r^{n})}{\Delta t}
+&-\frac{1}{2}\varepsilon^2\partial_x(k^n\partial_x E_r^{n+\frac{1}{2}})
+-\frac{1}{2}\varepsilon^2\partial_x(k^n\partial_x E_r^{n})-\frac{1}{2}\varepsilon^2\partial_y(k^n\partial_y E_r^{n+\frac{1}{2}})\vspace{1ex}\\
+&-\frac{1}{2}\varepsilon^2\partial_y(k^n\partial_y E_r^n)
+=\frac{1}{2}\sigma^{n}(H^{n+\frac{1}{2}}-E_r^{n+\frac{1}{2}}) +\frac{1}{2}\sigma^{n}(H^{n}-E_r^{n}),\vspace{1ex}\\
+\varepsilon^2\frac{2(E_r^{n+1}-E_r^{n+\frac{1}{2}})}{\Delta t}
+&-\frac{2}{3}\varepsilon^2\partial_x(k^n\partial_x E_r^{n+1})-\frac{2}{3}\varepsilon^2\partial_y(k^n\partial_y E_r^{n+1})-\frac{1}{6}\varepsilon^2\partial_x(k^n\partial_x E_r^{n+\frac{1}{2}})\vspace{1ex}\\
+&-\frac{1}{6}\varepsilon^2\partial_y(k^n\partial_y E_r^{n+\frac{1}{2}})
+-\frac{1}{6}\varepsilon^2\partial_x(k^n\partial_x E_r^{n})-\frac{1}{6}\varepsilon^2\partial_y(k^n\partial_y E_r^n)\vspace{1ex}\\
+&=\frac{2}{3}\sigma^{n}(H^{n+1}-E_r^{n+1})+\frac{1}{6}\sigma^{n}(H^{n+\frac{1}{2}}-E_r^{n+\frac{1}{2}})+\frac{1}{6}\sigma^{n}(H^{n}-E_r^{n}).\\
+\end{array}
+\right.
+\end{align}
+将上面系统~(\ref{nonequilibrium_61}) 中的第一个公式和第三个公式，以及第二个公式和第四个公式分别相加，可得到守恒状态的离散形式，
+\begin{align}\label{nonequilibrium_62}
+\left\{
+\begin{array}{lll}
+\frac{2((T+{E_r})^{n+\frac{1}{2}}-(T+{E_r})^{n})}{\Delta t}
+&-\frac{1}{2}\partial_x(k^n\partial_x E_r^{n+\frac{1}{2}})
+-\frac{1}{2}\partial_y(k^n\partial_y E_r^{n+\frac{1}{2}})-\frac{1}{2}\partial_x(k^n\partial_x E_r^{n})\vspace{1ex}\\
+&-\frac{1}{2}\partial_y(k^n\partial_y E_r^{n})=0,\vspace{1ex}\\
+\frac{2((T+{E_r})^{n+1}-(T+{E_r})^{n+\frac{1}{2}})}{\Delta t}
+&-\frac{2}{3}\partial_x(k^n\partial_x E_r^{n+1})
+-\frac{2}{3}\partial_y(k^n\partial_y E_r^{n+1})-\frac{1}{6}\partial_x(k^n\partial_x E_r^{n+\frac{1}{2}})\vspace{1ex}\\
+&-\frac{1}{6}\partial_y(k^n\partial_y E_r^{n+\frac{1}{2}})-\frac{1}{6}\partial_x(k^n\partial_x E_r^{n})-\frac{1}{6}\partial_y(k^n\partial_y E_r^{n})=0.
+\end{array}
+\right.
+\end{align}
+将方程组~(\ref{nonequilibrium_expand}) 代入系统~(\ref{nonequilibrium_61})，可得
+\begin{align}\label{nonequilibrium_63}
+\left\{
+\begin{array}{llllll}
+\varepsilon^2\frac{2(T_0^{n+\frac{1}{2}}+\varepsilon T_1^{n+\frac{1}{2}}+\varepsilon ^2T_2^{n+\frac{1}{2}}-T_0^n-\varepsilon T_1^n- \varepsilon^2 T_2^n+\cdots)}{\Delta t} &=
+-\frac{1}{2}\sigma^{n}_0(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}+H_0^{n}-E_{r0}^{n})\vspace{1ex}\\
+&-\frac{1}{2}\varepsilon \sigma^{n}_0(H_1^{n+\frac{1}{2}}-E_{r1}^{n+\frac{1}{2}}+H_1^{n}-E_{r1}^{n})\vspace{1ex}\\
+&-\frac{1}{2}\varepsilon \sigma^{n}_1(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}+H_0^{n}-E_{r0}^{n})\vspace{1ex}\\
+&+\cdots,\\
+\varepsilon^2\frac{2(T_0^{n+1}+\varepsilon T_1^{n+1}+\varepsilon ^2T_2^{n+1}-T_0^{n+\frac{1}{2}}-\varepsilon T_1^{n+\frac{1}{2}}-\varepsilon ^2T_2^{n+\frac{1}{2}}+\cdots)}{\Delta t}
+&= -\frac{2}{3}\sigma_0^n(H_0^{n+1}-E_{r0}^{n+1})\vspace{1ex}\\
+&-\frac{1}{6}\sigma^{n}_0(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}+F_0^{n}-E_{r0}^{n})\vspace{1ex}\\
+&-\frac{2}{3}\varepsilon\sigma^n_0(H^{n+1}_1-E_{r1}^{n+1})\vspace{1ex}\\
+&-\frac{2}{3}\varepsilon\sigma_1^n(H_0^{n+1}-E_{r0}^{n+1})\vspace{1ex}\\
+&-\frac{1}{6}\varepsilon \sigma^{n}_0(H_1^{n+\frac{1}{2}}-E_{r1}^{n+\frac{1}{2}}+H_1^{n}-E_{r1}^{n})\vspace{1ex}\\
+&-\frac{1}{6}\varepsilon \sigma^{n}_1(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}+H_0^{n}-E_{r0}^{n})\vspace{1ex}\\
+&+\cdots,\\
+\end{array}
+\right.
+\end{align}
+和
+\begin{align}\label{nonequilibrium_64}
+\begin{array}{llllllllllllllllllll}
+\varepsilon^2\frac{2(M^{n+\frac{1}{2}}-M^{n})}{\Delta t}
+&-\frac{1}{2}\varepsilon^2\partial_x((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_x (E_{r0}^{n+\frac{1}{2}}+\varepsilon E_{r1}^{n+\frac{1}{2}}+\varepsilon^2E_{r2}^{n+\frac{1}{2}}+\cdots))\vspace{1ex}\\
+&-\frac{1}{2}\varepsilon^2\partial_x((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_x (E_{r0}^{n}+\varepsilon E_{r1}^{n}+\varepsilon^2E_{r2}^{n}+\cdots))\vspace{1ex}\\
+&-\frac{1}{2}\varepsilon^2\partial_y((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_y (E_{r0}^{n+\frac{1}{2}}+\varepsilon E_{r1}^{n+\frac{1}{2}}+\varepsilon^2E_{r2}^{n+\frac{1}{2}}+\cdots))\vspace{1ex}\\
+&-\frac{1}{2}\varepsilon^2\partial_y((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_y (E_{r0}^{n}+\varepsilon E_{r1}^{n}+\varepsilon^2E_{r2}^{n}+\cdots))\vspace{1ex}\\
+&=
+\frac{1}{2}\sigma^{n}_0(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}+H_0^{n}-E_{r0}^{n})
++\frac{1}{2}\varepsilon \sigma^{n}_0(H_1^{n+\frac{1}{2}}-E_{r1}^{n+\frac{1}{2}}+H_1^{n}-E_{r1}^{n})\vspace{1ex}\\
+&
++\frac{1}{2}\varepsilon \sigma^{n}_1(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}+H_0^{n}-E_{r0}^{n})+\cdots,\vspace{1ex}\\
+\end{array}
+\end{align}
+\begin{align}\label{nonequilibrium_64}
+\begin{array}{llllllllllllllllllll}
+\varepsilon^2\frac{2(M^{n+1}-M^{n+\frac{1}{2}})}{\Delta t}
+&-\frac{2}{3}\varepsilon^2\partial_x((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_x (E_{r0}^{n+1}+\varepsilon E_{r1}^{n+1}+\varepsilon^2E_{r2}^{n+1}+\cdots))\vspace{1ex}\\
+&-\frac{2}{3}\varepsilon^2\partial_y((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_y (E_{r0}^{n+1}+\varepsilon E_{r1}^{n+1}+\varepsilon^2E_{r2}^{n+1}+\cdots))\vspace{1ex}\\
+&-\frac{1}{6}\varepsilon^2\partial_x((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_x (E_{r0}^{n+\frac{1}{2}}+\varepsilon E_{r1}^{n+\frac{1}{2}}+\varepsilon^2E_{r2}^{n+\frac{1}{2}}+\cdots))\vspace{1ex}\\
+&-\frac{1}{6}\varepsilon^2\partial_y((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_y (E_{r0}^{n+\frac{1}{2}}+\varepsilon E_{r1}^{n+\frac{1}{2}}+\varepsilon^2E_{r2}^{n+\frac{1}{2}}+\cdots))\vspace{1ex}\\
+&-\frac{1}{6}\varepsilon^2\partial_x((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_x (E_{r0}^{n}+\varepsilon E_{r1}^{n}+\varepsilon^2E_{r2}^{n}+\cdots))\vspace{1ex}\\
+&-\frac{1}{6}\varepsilon^2\partial_y((k_0^n+\varepsilon k_1^n+\varepsilon^2k_2^n+\cdots)\partial_y (E_{r0}^{n}+\varepsilon E_{r1}^{n}+\varepsilon^2E_{r2}^{n+}+\cdots))\vspace{1ex}\\
+&=
+\frac{2}{3}\sigma_0^n(H_0^{n+1}-E_{r0}^{n+1})-\frac{1}{6}\sigma^{n}_0(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}+H_0^{n}-E_{r0}^{n})\vspace{1ex}\\
+&
++\frac{2}{3}\varepsilon\sigma^n_0(H^{n+1}_1-E_{r1}^{n+1})-\frac{2}{3}\varepsilon\sigma_1^n(H_0^{n+1}-E_{r0}^{n+1})\vspace{1ex}\\
+&+\frac{1}{6}\varepsilon \sigma^{n}_0(H_1^{n+\frac{1}{2}}-E_{r1}^{n+\frac{1}{2}}+H_1^{n}-E_{r1}^{n})\vspace{1ex}\\
+&
++\frac{1}{6}\varepsilon \sigma^{n}_1(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}+H_0^{n}-E_{r0}^{n})+\cdots,\\
+\end{array}
+\end{align}
+其中~$M^{n+\frac{1}{2}}=E_{r0}^{n+\frac{1}{2}}+\varepsilon E_{r1}^{n+\frac{1}{2}}+\varepsilon^2E_{r2}^{n+\frac{1}{2}}+\cdots$.
+
+%Noth that the sum of the first equation and the third equation of the system (\ref{4.2.1}) gives
+%The $O(\varepsilon^0)$-equations of the first formula of the system (\ref{4.2.3.1}) gives
+%\begin{equation}\label{4.3.3}
+%(H_0^{n+\frac{1}{2}}-E_{r0}^{n+\frac{1}{2}}) + (H_0^{n}-E_{r0}^{n})=0.
+%\end{equation}
+%Substitute the above equations into the second equation of the system (\ref{4.2.3.1}) yields
+%\begin{equation}\label{4.2.3}
+%{E_{r0}^{n+1}}=H_0^{n+1}=(T_0^{n+1})^4.
+%\end{equation}
+从系统~(\ref{nonequilibrium_63})，(\ref{nonequilibrium_64})，可得其~$O(\varepsilon^0)$ 方程
+\begin{align}\label{nonequilibrium_65}
+\left\{
+\begin{array}{lll}
+\frac{2((T_0+{E_r}_0)^{n+\frac{1}{2}}-(T_0+{E_r}_0)^{n})}{\Delta t}
+&-\frac{1}{2}\partial_x(k_0^n\partial_x {E_r}_0^{n+\frac{1}{2}})
+-\frac{1}{2}\partial_y(k_0^n\partial_y {E_r}_0^{n+\frac{1}{2}})-\frac{1}{2}\partial_x(k_0^n\partial_x {E_r}_0^{n})\vspace{1ex}\\
+&-\frac{1}{2}\partial_y(k_0^n\partial_y {E_r}_0^{n})=0,\vspace{1ex}\\
+\frac{2((T_0+{E_r}_0)^{n+1}-(T_0+{E_r}_0)^{n+\frac{1}{2}})}{\Delta t}
+&-\frac{2}{3}\partial_x(k_0^n\partial_x {E_r}_0^{n+1})
+-\frac{2}{3}\partial_y(k_0^n\partial_y {E_r}_0^{n+1})-\frac{1}{6}\partial_x(k_0^n\partial_x {E_r}_0^{n+\frac{1}{2}})\vspace{1ex}\\
+&-\frac{1}{6}\partial_y(k_0^n\partial_y {E_r}_0^{n+\frac{1}{2}})-\frac{1}{6}\partial_x(k_0^n\partial_x {E_r}_0^{n})-\frac{1}{6}\partial_y(k_0^n\partial_y {E_r}_0^{n})=0,
+\end{array}
+\right.
+\end{align}
+这里
+\begin{equation}\label{nonequilibrium_66}
+{E_{r0}^{n+1}}=H_0^{n+1}=(T_0^{n+1})^4.
+\end{equation}
+该系统是~(\ref{nonequilibrium_58}) 的二阶时间离散。因此，TR/BDF2 算法的变换形式关于~$O(\varepsilon^0)$ 是渐近保持的。
+
+接下来，需要检验~$O(\varepsilon^1)$ 项。由方程组~(\ref{nonequilibrium_63})，(\ref{nonequilibrium_66}) 可得
+\begin{equation}\label{nonequilibrium_67}
+E_{r1}^{n+1}=H_1^{n+1}=4(T_0^{n+1})^3T^{n+1}_1.
+\end{equation}
+将方程组~(\ref{nonequilibrium_65}) 代入系统~(\ref{nonequilibrium_63})，(\ref{nonequilibrium_64})，可得其~$O(\varepsilon^1)$ 方程有
+\begin{equation}\label{nonequilibrium_68}
+\left\{
+\begin{array}{llll}
+\frac{2((T_1+{E_r}_1)^{n+\frac{1}{2}}-(T_1+{E_r}_1)^{n})}{\Delta t}
+&-\frac{1}{2}\partial_x(k_1^n\partial_x {E_r}_0^{n+\frac{1}{2}})-\frac{1}{2}\partial_x(k_0^n\partial_x {E_r}_1^{n+\frac{1}{2}})-\frac{1}{2}\partial_y(k_1^n\partial_y {E_r}_0^{n+\frac{1}{2}})\vspace{1ex}\\
+&-\frac{1}{2}\partial_y(k_0^n\partial_y {E_r}_1^{n+\frac{1}{2}})-\frac{1}{2}\partial_x(k_1^n\partial_x {E_r}_0^{n})-\frac{1}{2}\partial_x(k_0^n\partial_x {E_r}_1^{n})\vspace{1ex}\\
+&-\frac{1}{2}\partial_y(k_1^n\partial_y {E_r}_0^{n})-\frac{1}{2}\partial_y(k_0^n\partial_y {E_r}_1^{n})=0,\vspace{1ex}\\
+\frac{2((T_1+{E_r}_1)^{n+1}-(T_1+{E_r}_1)^{n+\frac{1}{2}})}{\Delta t}
+&-\frac{2}{3}\partial_x(k_1^n\partial_x {E_r}_0^{n+1})-\frac{2}{3}\partial_x(k_0^n\partial_x {E_r}_1^{n+1})-\frac{2}{3}\partial_y(k_1^n\partial_y {E_r}_0^{n+1})\vspace{1ex}\\
+&-\frac{2}{3}\partial_y(k_0^n\partial_y {E_r}_1^{n+1})-\frac{1}{6}\partial_x(k_1^n\partial_x {E_r}_0^{n+\frac{1}{2}})-\frac{1}{6}\partial_x(k_0^n\partial_x {E_r}_1^{n+\frac{1}{2}})\vspace{1ex}\\
+&-\frac{1}{6}\partial_y(k_1^n\partial_y {E_r}_0^{n+\frac{1}{2}})-\frac{1}{6}\partial_y(k_0^n\partial_y {E_r}_1^{n+\frac{1}{2}})-\frac{1}{6}\partial_x(k_1^n\partial_x {E_r}_0^{n})\vspace{1ex}\\
+&-\frac{1}{6}\partial_x(k_0^n\partial_x {E_r}_1^{n})-\frac{1}{6}\partial_y(k_1^n\partial_y {E_r}_0^{n})-\frac{1}{6}\partial_y(k_0^n\partial_y {E_r}_1^{n})=0.\\
+\end{array}
+\right.
+\end{equation}
+系统~(\ref{nonequilibrium_68}) 是方程组~(\ref{nonequilibrium_60}) 关于时间的二阶离散。
+因此，TR/BDF2 方法的变换形式关于~$O(\varepsilon^1)$ 是渐近保持的。
+
+\BiSection{数值实验}{Numerical experiments}
+
+除特殊说明外，辐射系数~$\mathcal{P}_0$ ，CFL 数~$C_{cfl}$，比热参数~$\gamma$，吸收横截面积~$\sigma$ 和限制器参数~$\theta$ 分别取$1.0,~0.5,~\frac{5}{3},~10^6,~1.0$。
+非线性热扩散为~$\kappa=K(1+10T^3)$，这里~$K=10^{-4}$ 是比例因子。
+%$\mathbf{Example~5.1}$ This example is used to support the asymptotic analysis. In this example, we have set the coefficient $\mathcal{P}_0=\sigma=1$. We consider the ODE problem ignoring radiation diffusion in system (\ref{4.1}). For the alternative form of TR/BDF2 method, we have
+%\begin{align}\label{5.2.1}
+%\left\{
+%\begin{array}{llllll}
+%\frac{2(T^{n+\frac{1}{2}}-T^n)}{\Delta t} &= -\frac{1}{2}((T^{n+\frac{1}{2}})^4-E_r^{n+\frac{1}{2}}) -\frac{1}{2}((T^{n})^4-E_r^{n}),\\
+%\frac{2(T^{n+1}-T^{n+\frac{1}{2}})}{\Delta t} &= -\frac{2}{3}((T^{n+1})^4-E_r^{n+1}) -\frac{1}{6}((T^{n+\frac{1}{2}})^4-E_r^{n+\frac{1}{2}}) -\frac{1}{6}((T^{n})^4-E_r^{n}),\\
+%\frac{2(E_r^{n+\frac{1}{2}}-E_r^{n})}{\Delta t}&=\frac{1}{2}((T^{n+\frac{1}{2}})^4-E_r^{n+\frac{1}{2}}) +\frac{1}{2}((T^{n})^4-E_r^{n}),\\
+%\frac{2(E_r^{n+1}-E_r^{n+\frac{1}{2}})}{\Delta t}&=\frac{2}{3}((T^{n+1})^4-E_r^{n+1})+\frac{1}{6}((T^{n+\frac{1}{2}})^4-E_r^{n+\frac{1}{2}}) +\frac{1}{6}((T^{n})^4-E_r^{n}).\\
+%\end{array}
+%\right.
+%\end{align}
+%For the simplified problem, when the time steps large than the equilibration time scale, we expect the solution $E_r=T^4$.
+%Now, we will simulate the above problem with initial conditions of $E_r=2$ and $T^4=0.1$.
+%\begin{figure}[H]
+%  \centering
+%  \includegraphics[width=10cm,height=5cm]{ex1.png}
+%  \caption{The alternate form of TR/BDF2 method.}\label{Fig1}
+%\end{figure}
+%The Figure \ref{Fig1} shows that near equilibrium in two time steps and clear equilibrium in three time steps, even for large time steps.
+%For time steps larger than the equilibration time scale (1 in this case), we can observe the solution $E_r=T^4$, which is our expected solution.
+%$\mathbf{Example~5.2}$ In this example, we consider a thermal wave problem with the nonlinear model. In the region $0\leq x\leq1$, the 50 uniform finite volumes is used. The initial data satisfies, $E_r(x,t=0)=(T(x,t=0))^4=10^{-4}$. The thermal wave is introduced through the left boundary, $E_r(x=0,t)=1$. Here, we choose the parameter $\varepsilon = 0.1$. %At the same time, in order to remove the issue caused by the discontinuity between the left boundary condition and the initial conditions, the first eight time steps are $0.1\Delta t, 0.1\Delta t, 0.2\Delta t, 0.2\Delta t, 0.3\Delta t, 0.3\Delta t, 0.4\Delta t, 0.4\Delta t$.
+%
+%In the Figure \ref{Fig2.1}, we present the results for the alternative form of TR/BDF2 method with the time step $\Delta t=0.05$. The Figure shows the method matches the asymptotic solution.
+%\begin{figure}[H]
+%  \centering
+%  \includegraphics[width=10cm,height=5cm]{ex2_T_Tr.png}
+%  \caption{The alternate form of TR/BDF2 solutions at time t=0.5 and t=1.5.}\label{Fig2.1}
+%\end{figure}
+
+\begin{example}
+如文献~\cite{2007Numerical}，使用~``manufactured" 解的方法来测试辐射流体力学显隐格式的数值精度。平衡扩散极限下辐射问题光滑解$(\rho,u,p)=(sin(x-t)+2,cos(x-t)+2,0.5*(cos(x-t)+2))$
+描述了一个周期传播的正弦波。计算域为~$2\pi$，辐射参数为~$\mathcal{P}_0=0.001$。表~\ref{table2} 给出了该格式在时间~$t=0.2$ 时刻关于密度的~$l^2$ 误差，并得到其相应的收敛阶。
+\begin{table}[htbp]
+\bicaption[table2]{}{密度的$l^2$误差}{Table$\!$}{The $l^2$ error in density.}
+\vspace{0.5em}\centering\wuhao
+\begin{tabular}{ccc}   %三个c是因为三列，令每列显示在中间显示，也可以是l或r
+\toprule[1.5pt]
+ N & $l^2$-error & $l^2$-order\\
+\midrule[1pt]         %画一条横线
+  20  & 0.0031577 & - \\
+  40  & 0.0006025 & 2.38\\
+  80 &0.0001341 & 2.16\\
+  160 &0.0000322 & 2.05\\
+  320 &0.0000071 & 2.17\\
+\bottomrule[1.5pt]
+\end{tabular}
+\end{table}
+\end{example}
+
+\begin{example}
+该例是涉及到两个向相反方向移动稀疏波的一维激波管问题。对于系统~(\ref{equilibrium_2Dmodel})，给定下面的初始数据。
+\begin{equation}\label{example3}
+\left\{
+\begin{array}{ll}
+\rho=1.0,\quad u=-1.0, \quad T=1.0, \quad 0\leq x\leq0.5\vspace{1ex}\\
+\rho=1.0,\quad u=1.0, \quad \quad T=1.0, \quad 0.5\leq x\leq1.\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+将计算域分为~200 个网格。首先，图~\ref{2d_two_rarefaction_wave_compare} 展现了在~$t=0.2$ 时刻该显隐格式关于~200 个网格的计算结果。并且观测到我们的格式能够很好的收敛到参考解，这里的参考解由文献~\cite{2013Application} 获得。
+类似于文献~\cite{2013Application}，分别展现不同的扩散项~$K=0.0001,~0.001,~0.01$ 对数值结果的影响，见图~\ref{2d_two_rarefaction_k_compare}。可以看出~$K=0.01$ 时，扩散项对数值结果的影响最大，这一结果符合实际的物理意义。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath two_rarefarewave_compare}
+\bicaption[2d_two_rarefaction_wave_compare]{}{激波管问题。在$t=0.2$时刻，该显隐格式200个网格点得到的密度、流体温度和辐射温度的解和参考解的对比。}{Fig.$\!$}{A shock-tube problem. The solution of density, fluid temperature and radiation temperature of our scheme with 200 mesh cells at t=0.2 against the reference solution.}\label{two_rarefaction_wave_compare}\vspace{-1em}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath two_rarefaction_k_compare}
+\bicaption[2d_two_rarefaction_k_compare]{}{激波管问题. 在时间t=0.2时刻，系统(\ref{equilibrium_2Dmodel})在200个网格上，对于不同的缩放因子$K=0.0001,~0.001,~0.01$的比较结果}{Fig.$\!$}{A shock-tube problem. The comparison results for the system (\ref{equilibrium_2Dmodel}) with 200 mesh cells for $K=0.0001,~0.001,~0.01$ at t=0.2.}\label{two_rarefaction_k_compare}\vspace{-1em}
+\end{figure}
+\end{example}
+
+\begin{example}
+考虑一维的激波管问题。对于系统~(\ref{equilibrium_2Dmodel})，给定以下初始条件
+\begin{equation}\label{example3}
+\left\{
+\begin{array}{ll}
+\rho=1.0,\quad u=50.0, ~~\quad T=0.5, \quad 0\leq x\leq0.6\vspace{1ex}\\
+\rho=2.0,\quad u=-40.0, \quad  T=1.0, \quad 0.6\leq x\leq1.\\
+\end{array}
+\right.
+\end{equation}
+计算域被分成~200 个网格。该黎曼问题的数值解包含两个马赫数分别为~39 和~82 的激波和一个接触间断。从图~\ref{2d_two_shock_compare} 中，可以看到该显隐格式得到的数值解等很好的拟合参考解。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath two_shock_compare}
+\bicaption[2d_two_shock_compare]{}{激波管问题. 在t=0.04时刻，我们格式在200个网格上得到的密度、流体温度、辐射温度解与参考解的对比。}{Fig.$\!$}{A shock-tube problem. The solution of density, fluid temperature and radiation temperature of our scheme with 200 mesh cells at t=0.04 against the reference solution.}\label{two_shock_compare}\vspace{-1em}
+\end{figure}
+\end{example}
+
+\begin{example}
+该算例是包含两个马赫数分别为~107.7 和~227.4 的强激波和一个接触间断的一维激波管问题。对于系统~(\ref{equilibrium_2Dmodel})，给定初始条件
+
+\begin{equation}\label{example4}
+\left\{
+\begin{array}{ll}
+\rho=1.0,\quad u=150.0, ~~\quad T=0.5, \quad 0\leq x\leq0.5\vspace{1ex}\\
+\rho=2.0,\quad u=-100.0, \quad  T=1.0, \quad 0.5\leq x\leq1.\\
+\end{array}
+\right.
+\end{equation}
+计算域被分成200个网格。图~\ref{2d_two_strongshock_compare}中展现了~$t=0.018$ 时刻，该系统密度、速度、压力以及温度的数值解。可以从图中看出，该显隐格式拟合的很好。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath two_strongshock_compare}
+\bicaption[2d_two_strongshock_compare]{}{激波管问题. 在t=0.018时刻，我们格式在200个网格上得到的密度、流体温度、辐射温度解与参考解的对比。}{Fig.$\!$}{A shock-tube problem. The solution of density, fluid temperature and radiation temperature of our scheme with 200 mesh cells at t=0.018 against the reference solution.}\label{two_strongshock_compare}\vspace{-1em}
+\end{figure}
+\end{example}
+
+\begin{example}
+该算例中，展现显隐格式在非平衡扩散极限下辐射流体力学模型中的表现。本例在~$\mathcal{P}_0$ 取 $10^{-4}$。
+初始条件~$(\rho_0,T_0,T_{r0},u_0)$ 是~$(1,1,1,\tilde{u}_0)$，是该黎曼问题的左端状态。而右端状态~$(\rho_1,T_1,T_{r1},u_1)$ 可以通过激波跳跃条件获得。
+该激波的Rakine-Hugoniot条件有，
+
+\begin{equation}\label{example5}
+\begin{array}{ll}
+(\rho u)_0&=(\rho u)_1, \vspace{1ex}\\
+(\rho u^2+p^*)_0&=(\rho u^2+p^*)_1, \vspace{1ex}\\
+((E^*+p^*)u)_0&=((E^*+p^*)u)_1.
+\end{array}
+\end{equation}
+
+右端初始条件~$\rho_1$, $T_1$ 和~$u_1$ 可以通过求解方程组~(\ref{example5}) 获得。
+%The shock structure is exhibited for the radiation hydrodynamical equations in the Figure.
+在接下来的算例中，选用不同的$u_0$值进行测试。参考解从文献~\cite{2021Implicit-explicit} 中获得。
+%In the Figure (\ref{Fig2}-\ref{Fig5}).
+
+从图~\ref{2d_ex_105}-\ref{2d_ex2_3} 中可以看出对于系统~(\ref{nonequilibrium_2Dmodel})，辐射温度总是连续的。然而，对于~$u_0$ 不同的取值，流体温度和密度却展现出不同的表现。
+对于~$u_0=1.05$ 时，从图~\ref{2d_ex_105} 可以看出流体温度和密度都是连续的。当~$u_0=1.2$ 时，从图~\ref{2d_ex_12} 中可以观测到有流体激波嵌入。密度和流体温度均是间断的。
+当~$u_0=1.4$ 时，可以从图~\ref{2d_ex_14} 中不仅看到有嵌入的流体激波而且有等温的声速点存在，密度和流体温度均是间断的，在这种情况下，流体的最大温度即是流体激波波尾的温度。
+当~$u_0=3.0$ 时，图~\ref{2d_ex2_3} 中看出有流体及等温的声速点存在，并且可以能够清晰的观察到有~Zel'dovich 飞跃出现。在该情况下，流体的最大温度超过了激波后的温度$T_1$。 密度和物质温度是间断的。
+该数值实验的结果与文献~\cite{2008Radiative} 中的理论一致。
+%for different values for $u_0$, the behavior of fluid temperature and the density are different.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath ex_105}
+\bicaption[2d_ex_105]{}{静态激波问题. $u_0=1.05$条件下，密度、流体温度和辐射温度在100个网格上的结果}{Fig.$\!$}{A steady shock problem. The solution of density, fluid temperature and radiation temperature for $u_0=1.05$ on 100 mesh cells.}\label{Fig2}\vspace{-1em}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath ex_12}
+\bicaption[2d_ex_12]{}{静态激波问题. $u_0=1.2$条件下，密度、流体温度和辐射温度在100个网格上的结果}{Fig.$\!$}{A steady shock problem. The solution of density, fluid temperature and radiation temperature for $u_0=1.2$ on 100 mesh cells.}\label{Fig3}\vspace{-1em}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath ex_14}
+\bicaption[2d_ex_14]{}{静态激波问题. $u_0=1.4$条件下，密度、流体温度和辐射温度在100个网格上的结果}{Fig.$\!$}{A steady shock problem. The solution of density, fluid temperature and radiation temperature for $u_0=1.4$ on 100 mesh cells.}\label{Fig4}\vspace{-1em}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath ex2_3}
+\bicaption[2d_ex2_3]{}{静态激波问题. $u_0=3.0$条件下，密度、流体温度和辐射温度在100个网格上的结果}{Fig.$\!$}{A steady shock problem. The solution of density, fluid temperature and radiation temperature for $u_0=3.0$ on 100 mesh cells.}\label{Fig5}\vspace{-1em}
+\end{figure}
+\end{example}
+
+\begin{example}
+该算例描述了风与密度云的反应。在计算区域~$\Omega=[0,2]\times[0,1]$ 内，密度云的中心位于~$(x_0,y_0)=(0.3,0.5)$，且半径为~$r=0.15$。$\Omega$ 中的初始数据为
+\begin{equation*}
+(\rho,u,v,T)(x,y,0)=
+\left\{
+\begin{array}{ll}
+(25,0,0,0.09),~~~(x-x_0)^2+(y-y_0)^2\leq R^2,\\
+(1,0,0,0.09),~~~~~(x-x_0)^2+(y-y_0)^2> R^2.\\
+\end{array}
+\right.
+\end{equation*}
+从左端边界引入风，其状态为~$(\rho, u, v, T)(0, y, t)=(1, 6(1-e^{-10t}), 0, 0.09)$。
+将计算零扩散极限与~$K=0.001$ 时的平衡扩散极限下辐射模型的数值结果。
+图~\ref{2d_rho_2d_k0}-\ref{2d_T_2d_k0d001} 中，展示了网格为~$200\times100$，在时间~$t=0.6$ 时，系统~(\ref{equilibrium_2Dmodel}) 的密度和温度的解。
+从图中可以看到，进入的波会在气泡中产生冲击，并产生折射冲击。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath rho_2d_k0}
+\bicaption[2d_rho_2d_k0]{}{在t = 0.6时$200\times 100$均匀单元，30个等高线上密度的解，其中K = 0。}{Fig.$\!$}{The solutions of density at t=0.6 with $200\times 100$ uniform cells and 30 equally contour lines, where K=0.}\label{Fig6}\vspace{-1em}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath T_2d_k0}
+\bicaption[2d_T_2d_k0]{}{在t = 0.6时$200\times 100$均匀单元，30个等高线上温度的解，其中K = 0}{Fig.$\!$}{The solutions of temperature at t=0.6 with $200\times 100$ uniform cells and 30 equally contour lines, where K=0.}\label{Fig7}\vspace{-1em}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath rho_2d_k0d001}
+\bicaption[2d_rho_2d_k0d001]{}{在t = 0.6时$200\times 100$均匀单元，30个等高线上密度的解，其中K=0.001}{Fig.$\!$}{The solutions of density at t=0.6 with $200\times 100$ uniform cells and 30 equally contour lines, where K=0.001.}\label{Fig8}\vspace{-1em}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{\fpath T_2d_k0d001}
+\bicaption[2d_T_2d_k0d001]{}{在t = 0.6时$200\times 100$均匀单元，30个等高线上温度的解，其中K=0.001}{Fig.$\!$}{The solutions of temperature at t=0.6 with $200\times 100$ uniform cells and 30 equally contour lines, where K=0.001.}\label{Fig9}\vspace{-1em}
+\end{figure}
+\end{example}
+\BiSection{小结}{}
+本节，设计了易于实现的显隐格式分别求解平衡扩散和非平衡扩散极限下二维的灰度辐射流体力学方程组。为了克服多时间尺度和刚性源项带来的计算困难，采用了算子分裂的技术。对于辐射扩散方程，本文采用了TR/BDF2方法的变换形式，并证明该算法是渐近保持的。数值实验与辐射激波理论的一致性验证了该格式的有效性。
+%\section{Conclusion}
+%This IEMX method can solve the two-dimensional radiation hydrodynamic model in the limit of the grey non-equilibrium diffusion and the equilibrium diffusion. In order to overcome the difficulties caused by the multiple time scales and the stiff source, an operator split
+%technique and the alternative form of TR/BDF2 method are chosen. At the same time, the alternative form of TR/BDF2 method is asymptotic preserving. The numerical results of this scheme and theoretical results in \cite{LowrieandEdwards} are in great agreement.
