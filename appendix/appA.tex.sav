@@ -1,0 +1,90 @@
+% -*-coding: utf-8 -*-
+
+\appendix
+\setcounter{chapter}{0} \setcounter{section}{0}
+\setcounter{figure}{0} \setcounter{table}{0}
+\setcounter{equation}{0}
+\renewcommand{\thechapter}{\Alph{chapter}}
+
+\renewcommand{\fpath}{./appendix/figures/}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\BiAppChapter{辐射流体力学方程组的``Manufactured"解}{Full Appendix}\label{FuluA}
+为了确定算法的阶，我们需要一种计算该算法截断误差的方法。因为这需要获得该系统的精确解或者非常接近的估计解，但对于辐射流体方程组来说，这是具有困难的。为了克服这一难点，我们采用MMS(Method of Manufactured Solutions) 方法\cite{2017Second}。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\BiSection{MMS算法得到模型的解}{Section in Appendix}
+我们将假定精确解为函数形式，并使用该函数形式推导出强迫函数组，而这些强迫函数组可用于通过我们的设计的数值方法来再现这些解。
+
+我们设精确流体解的函数形式为
+\begin{equation}\label{exact_solution}
+\left\{
+\begin{array}{lll}
+\rho=(sin(x-t)+2),\vspace{1ex}\\
+u=(cos(x-t)+2),\vspace{1ex}\\
+p=\alpha*(cos(x-t)+2).\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+利用状态方程(\ref{prefect_gas_EOS})，可得
+\begin{equation}\label{exact_solution_T}
+T=\frac{\alpha\gamma(cos(x-t)+2)}{sin(x-t)+2}.
+\end{equation}
+因此，我们可得以下关系式，
+\begin{equation}\label{exact_solution_relationship1}
+\left\{
+\begin{array}{lllll}
+\frac{\partial\rho}{\partial t}=-cos(x-t),\vspace{1ex}\\
+\frac{\partial\rho}{\partial x}=cos(x-t),\vspace{1ex}\\
+\frac{\partial u}{\partial t}=sin(x-t),\vspace{1ex}\\
+\frac{\partial u}{\partial x}=-sin(x-t),\vspace{1ex}\\
+\frac{\partial p}{\partial x}=-\alpha sin(x-t),\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+\begin{equation}\label{exact_solution_relationship2}
+\left\{
+\begin{array}{lllll}
+\frac{\partial T}{\partial t}=\frac{\alpha\gamma+2\alpha\gamma(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2},\vspace{1ex}\\
+\frac{\partial T}{\partial x}=\frac{-\alpha\gamma-2\alpha\gamma(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2},\vspace{1ex}\\
+\frac{\partial^2 T}{\partial x^2}=\frac{2\alpha\gamma}{(sin(x-t)+2)^3}[1+sin(x-t)cos(x-t)+2sin(x-t)-cos(x-t)],\vspace{1ex}\\
+\frac{\partial E}{\partial t}=\frac{\alpha}{\gamma-1}\frac{1+2(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2}+(cos(x-t)+2)sin(x-t),\vspace{1ex}\\
+\frac{\partial E}{\partial x}=-\frac{\alpha}{\gamma-1}\frac{1+2(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2}-(cos(x-t)+2)sin(x-t),\vspace{1ex}\\
+\end{array}
+\right.
+\end{equation}
+我们将以上关系式代入系统(\ref{equilibrium_model})可得
+\begin{equation}\label{equilibrium_model_MMS}
+\left\{
+\begin{array}{lll}
+ \partial_t&\rho+\partial_x(\rho {u})=Q_\rho,\vspace{1ex}\\
+ \partial_t&(\rho {u})+\partial_x(\rho {u}^2+p^*)=Q_u,\vspace{1ex}\\
+ \partial_t&(\rho E^*)+\partial_x(( E^*+p^*){u})=Q_E,
+\end{array}
+\right.
+\end{equation}
+其中，
+\begin{equation}\label{equilibrium_model_Q_rho}
+Q_\rho=cos2(x-t)+cos(x-t)-2sin(x-t),
+\end{equation}
+\begin{equation}\label{equilibrium_model_Q_u}
+\begin{array}{rl}
+Q_u&=-cos(x-t)[cos(x-t)+2]+[sin(x-t)+2]sin(x-t)+cos(x-t)[cos(x-t)+2]^2\vspace{1ex}\\
+&+2[sin(x-t)+2][cos(x-t)+2](-sin(x-t))-\alpha sin(x-t)\vspace{1ex}\\
+&+\frac{4}{3}\mathcal{P}_0\frac{\alpha^3\gamma^3(cos(x-t)+2)^3}{(sin(x-t)+2)^3}\frac{-\alpha\gamma-2\alpha\gamma(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2},
+\end{array}
+\end{equation}
+\begin{equation}\label{equilibrium_model_Q_E}
+\begin{array}{rl}
+Q_E&=-cos(x-t)[\frac{\alpha(cos(x-t)+2)}{(\gamma-1)((sin(x-t)+2)}+\frac{1}{2}(cos(x-t)+2)^2]\vspace{1ex}\\
+&+(sin(x-t)+2)[\frac{\alpha}{\gamma-1}\frac{1+2(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2}+(cos(x-t)+2)sin(x-t)]\vspace{1ex}\\
+&+4\mathcal{P}_0\frac{\alpha^3\gamma^3(cos(x-t)+2)^3}{(sin(x-t)+2)^3}\frac{\alpha\gamma+2\alpha\gamma(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2}\vspace{1ex}\\
+&-sin(x-t)[(sin(x-t)+2)(\frac{\alpha(cos(x-t)+2)}{(\gamma-1)(sin(x-t)+2)}+\frac{1}{2}(cos(x-t)+2)^2)+\alpha(cos(x-t)+2)\vspace{1ex}\\
+&+\frac{4}{3}\mathcal{P}_0\frac{\alpha^4\gamma^4(cos(x-t)+2)^4}{(sin(x-t)+2)^4}]\vspace{1ex}\\
+&+[cos(x-t)+2][cos(x-t)(\frac{\alpha(cos(x-t)+2)}{(\gamma-1)(sin(x-t)+2)}+\frac{1}{2}(cos(x-t)+2)^2)-\alpha sin(x-t)\vspace{1ex}\\
+&+(sin(x-t)+2)[-\frac{\alpha}{\gamma-1}\frac{1+2(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2}-(cos(x-t)+2)sin(x-t)]\vspace{1ex}\\
+&+\frac{16}{3}\mathcal{P}_0\frac{\alpha^3\gamma^3(cos(x-t)+2)^3}{(sin(x-t)+2)^3}\frac{-\alpha\gamma-2\alpha\gamma(sin(x-t)+cos(x-t))}{(sin(x-t)+2)^2}]\vspace{1ex}\\
+&-4\mathcal{P}_0(3\frac{\alpha^2\gamma^2(cos(x-t)+2)^2}{(sin(x-t)+2)^2})\frac{\alpha\gamma+2\alpha\gamma(sin(x-t)+cos(x-t))^2}{(sin(x-t)+2)^4}\vspace{1ex}\\
+&-\frac{\alpha^4\gamma^4(cos(x-t)+2)^3}{(sin(x-t)+2)^3}\frac{2(cos(x-t)-sin(x-t))(sin(x-t)+2)^2-2(sin(x-t)+2)cos(x-t)[1+2(sin(x-t)+cos(x-t))]}{(sin(x-t)+2)^4}.\vspace{1ex}
+\end{array}
+\end{equation}
+使用函数(\ref{equilibrium_model_Q_rho}),\ref{equilibrium_model_Q_u}),(\ref{equilibrium_model_Q_E})作为(\ref{equilibrium_model_MMS})的源项，方程(\ref{exact_solution}) 便是系统(\ref{equilibrium_model_MMS})的精确解。我们可以将这些函数用来计算时间和空间上辐射流体力学算法的精度。
