@@ -1,4 +1,4 @@
-# GSCAEP-latex-template
+# GSCAEP-latex-template(中物院研究生院学位论文模板)
 
 中物院研究生院学位论文latex模板
 
