@@ -4,4 +4,4 @@
 
 如果你有任何问题请邮件联系songjj_lfrc@163.com
 
-初次编译请使用xelatx！！！
+初次编译请使用xelatex！！！
